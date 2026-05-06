@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: sans-serif; font-size: 11pt; color: #1a1a2e; padding: 40px; }
+
+        .header { border-bottom: 3px solid #1b4f72; padding-bottom: 16px; margin-bottom: 24px; }
+        .header h1 { font-size: 22pt; color: #1b4f72; }
+        .header .meta { font-size: 10pt; color: #555; margin-top: 4px; }
+
+        .section { margin-bottom: 22px; }
+        .section-title {
+            font-size: 13pt; font-weight: bold; color: #1b4f72;
+            border-left: 4px solid #a8d5a2; padding-left: 8px;
+            margin-bottom: 10px;
+        }
+
+        .summary-box {
+            background: #f4f9f4; border-radius: 6px;
+            padding: 12px 16px; line-height: 1.7;
+        }
+
+        .skill-list { display: flex; flex-wrap: wrap; gap: 6px; }
+        .skill-tag {
+            background: #1b4f72; color: #fff;
+            padding: 3px 10px; border-radius: 12px; font-size: 9pt;
+        }
+
+        .project-card {
+            border: 1px solid #d0e8d0; border-radius: 6px;
+            padding: 12px 16px; margin-bottom: 10px;
+        }
+        .project-title { font-size: 12pt; font-weight: bold; color: #1b4f72; }
+        .project-role { font-size: 9pt; color: #888; margin: 2px 0 6px; }
+        .project-desc { font-size: 10pt; line-height: 1.6; color: #333; }
+        .project-stack { margin-top: 8px; }
+        .stack-tag {
+            display: inline-block; background: #eaf4ea;
+            color: #2e7d32; padding: 2px 8px; border-radius: 10px;
+            font-size: 8.5pt; margin-right: 4px;
+        }
+        .project-links { margin-top: 6px; font-size: 9pt; color: #1b4f72; }
+
+        .footer { text-align: center; font-size: 9pt; color: #aaa; margin-top: 30px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1 th:text="${resume.title}">이력서 제목</h1>
+    <div class="meta">
+        <span th:if="${resume.targetJob}" th:text="'희망 직무: ' + ${resume.targetJob}"></span>
+    </div>
+</div>
+
+<div class="section" th:if="${resume.summary != null and !resume.summary.isEmpty()}">
+    <div class="section-title">자기소개</div>
+    <div class="summary-box" th:text="${resume.summary}"></div>
+</div>
+
+<div class="section" th:if="${resume.skills != null and !resume.skills.isEmpty()}">
+    <div class="section-title">보유 기술</div>
+    <div class="skill-list">
+        <span class="skill-tag" th:each="skill : ${resume.skills}" th:text="${skill}"></span>
+    </div>
+</div>
+
+<div class="section" th:if="${resume.portfolios != null and !resume.portfolios.isEmpty()}">
+    <div class="section-title">프로젝트</div>
+    <div class="project-card" th:each="p : ${resume.portfolios}">
+        <div class="project-title" th:text="${p.title}"></div>
+        <div class="project-role" th:text="${p.role} + ' · ' + (${p.startDate} != null ? ${#temporals.format(p.startDate, 'yyyy.MM')} : '') + ' ~ ' + (${p.endDate} != null ? ${#temporals.format(p.endDate, 'yyyy.MM')} : '진행 중')"></div>
+        <div class="project-desc" th:if="${p.description}" th:text="${p.description}"></div>
+        <div class="project-stack" th:if="${p.techStack != null and !p.techStack.isEmpty()}">
+            <span class="stack-tag" th:each="t : ${p.techStack}" th:text="${t}"></span>
+        </div>
+        <div class="project-links">
+            <span th:if="${p.githubUrl != null and !p.githubUrl.isEmpty()}">GitHub: <span th:text="${p.githubUrl}"></span></span>
+            <span th:if="${p.deployUrl != null and !p.deployUrl.isEmpty()}"> &nbsp;|&nbsp; Deploy: <span th:text="${p.deployUrl}"></span></span>
+        </div>
+    </div>
+</div>
+
+<div class="footer">CampusFlow — 컴퓨터정보과 학과 통합 관리 시스템</div>
+
+</body>
+</html>
