@@ -1,0 +1,440 @@
+import { useState, useEffect, useRef } from 'react'
+import Layout from '../components/layout/Layout'
+import {
+  getPortfolios, createPortfolio, deletePortfolio,
+  generateFromGithub, generateFromFile
+} from '../api/portfolio'
+import { getResumes, createResume, downloadResumePdf, deleteResume } from '../api/resume'
+
+const STATUS_LABEL = { IN_PROGRESS: '진행 중', COMPLETED: '완료' }
+const STATUS_COLOR = {
+  IN_PROGRESS: 'bg-secondary-container dark:bg-secondary-fixed/20 text-on-secondary-container dark:text-secondary-fixed',
+  COMPLETED:   'bg-surface-container dark:bg-slate-700 text-on-surface-variant dark:text-slate-300',
+}
+
+function PortfolioCard({ p, onDelete }) {
+  return (
+    <div className="card p-5 group relative">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1 min-w-0 mr-3">
+          <h4 className="font-bold text-primary dark:text-white truncate">{p.title}</h4>
+          <p className="text-label-md text-outline dark:text-slate-400">{p.role}</p>
+        </div>
+        <span className={`text-[10px] font-bold px-2 py-1 rounded-full shrink-0 ${STATUS_COLOR[p.status]}`}>
+          {STATUS_LABEL[p.status]}
+        </span>
+      </div>
+      {p.description && (
+        <p className="text-sm text-on-surface-variant dark:text-slate-400 mb-3 line-clamp-2">{p.description}</p>
+      )}
+      {p.techStack?.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {p.techStack.slice(0, 5).map(t => (
+            <span key={t} className="text-[10px] px-2 py-0.5 bg-surface-container-low dark:bg-slate-800 text-on-surface-variant dark:text-slate-300 rounded-full border border-outline-variant dark:border-slate-700">{t}</span>
+          ))}
+        </div>
+      )}
+      <div className="flex items-center gap-2 text-label-md text-outline dark:text-slate-500">
+        {p.startDate && <span>{p.startDate} ~ {p.endDate ?? '현재'}</span>}
+        {p.githubUrl && (
+          <a href={p.githubUrl} target="_blank" rel="noreferrer" className="ml-auto flex items-center gap-1 text-primary dark:text-secondary-fixed hover:underline">
+            <span className="material-symbols-outlined text-[14px]">code</span>GitHub
+          </a>
+        )}
+      </div>
+      <button
+        onClick={() => onDelete(p.id)}
+        className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg bg-error-container dark:bg-error/20 text-error hover:scale-110 transition-all"
+      >
+        <span className="material-symbols-outlined text-[16px]">delete</span>
+      </button>
+    </div>
+  )
+}
+
+export default function Technical() {
+  const [tab, setTab] = useState('portfolio')
+  const [portfolios, setPortfolios] = useState([])
+  const [resumes, setResumes] = useState([])
+  const [loading, setLoading] = useState(false)
+
+  // AI generate state
+  const [showGenModal, setShowGenModal] = useState(false)
+  const [githubUrl, setGithubUrl] = useState('')
+  const [genLoading, setGenLoading] = useState(false)
+  const [draft, setDraft] = useState(null)
+  const [genError, setGenError] = useState('')
+  const fileRef = useRef()
+
+  // Resume create state
+  const [showResumeForm, setShowResumeForm] = useState(false)
+  const [resumeForm, setResumeForm] = useState({ title: '', summary: '', skills: '', targetJob: '', portfolioIds: [] })
+
+  useEffect(() => {
+    loadData()
+  }, [tab])
+
+  const loadData = async () => {
+    setLoading(true)
+    try {
+      if (tab === 'portfolio') {
+        const r = await getPortfolios()
+        setPortfolios(r.data ?? [])
+      } else {
+        const r = await getResumes()
+        setResumes(r.data ?? [])
+      }
+    } catch {
+      // ignore — show empty state
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleGithubGenerate = async () => {
+    if (!githubUrl.trim()) return
+    setGenLoading(true)
+    setGenError('')
+    try {
+      const r = await generateFromGithub(githubUrl.trim())
+      setDraft(r.data)
+    } catch {
+      setGenError('GitHub에서 정보를 가져오지 못했습니다.')
+    } finally {
+      setGenLoading(false)
+    }
+  }
+
+  const handleFileGenerate = async (file) => {
+    setGenLoading(true)
+    setGenError('')
+    try {
+      const r = await generateFromFile(file)
+      setDraft(r.data)
+    } catch {
+      setGenError('파일 분석 중 오류가 발생했습니다.')
+    } finally {
+      setGenLoading(false)
+    }
+  }
+
+  const handleSaveDraft = async () => {
+    if (!draft) return
+    try {
+      await createPortfolio({
+        title: draft.title,
+        description: draft.description,
+        role: draft.role,
+        techStack: draft.techStack?.join(', '),
+        startDate: draft.startDate,
+        endDate: draft.endDate,
+        githubUrl: draft.githubUrl,
+        deployUrl: draft.deployUrl,
+        status: draft.status ?? 'COMPLETED',
+      })
+      setShowGenModal(false)
+      setDraft(null)
+      setGithubUrl('')
+      loadData()
+    } catch {
+      setGenError('저장 중 오류가 발생했습니다.')
+    }
+  }
+
+  const handleDeletePortfolio = async (id) => {
+    if (!confirm('포트폴리오를 삭제하시겠습니까?')) return
+    await deletePortfolio(id)
+    setPortfolios(prev => prev.filter(p => p.id !== id))
+  }
+
+  const handleCreateResume = async (e) => {
+    e.preventDefault()
+    try {
+      await createResume({ ...resumeForm, portfolioIds: portfolios.slice(0, 3).map(p => p.id) })
+      setShowResumeForm(false)
+      setResumeForm({ title: '', summary: '', skills: '', targetJob: '', portfolioIds: [] })
+      if (tab === 'resume') loadData()
+    } catch {
+      alert('이력서 생성 중 오류가 발생했습니다.')
+    }
+  }
+
+  const handleDownloadPdf = async (id, title) => {
+    try {
+      const r = await downloadResumePdf(id)
+      const url = URL.createObjectURL(new Blob([r], { type: 'application/pdf' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${title}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      alert('PDF 다운로드 중 오류가 발생했습니다.')
+    }
+  }
+
+  return (
+    <Layout title="포트폴리오 · 이력서">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <h2 className="font-['Space_Grotesk'] text-2xl font-bold text-primary dark:text-white">포트폴리오 · 이력서</h2>
+          <p className="text-on-surface-variant dark:text-slate-400 text-sm mt-1">프로젝트를 등록하고 이력서를 자동으로 완성하세요.</p>
+        </div>
+        <div className="flex gap-2">
+          {tab === 'portfolio' && (
+            <button
+              onClick={() => { setShowGenModal(true); setDraft(null); setGenError('') }}
+              className="btn-primary text-sm"
+            >
+              <span className="material-symbols-outlined text-[18px]">auto_awesome</span>AI로 만들기
+            </button>
+          )}
+          {tab === 'resume' && (
+            <button onClick={() => setShowResumeForm(true)} className="btn-primary text-sm">
+              <span className="material-symbols-outlined text-[18px]">add</span>이력서 생성
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 p-1 bg-surface-container dark:bg-slate-800 rounded-2xl w-fit mb-6">
+        {[{ key: 'portfolio', label: '포트폴리오', icon: 'work_history' }, { key: 'resume', label: '이력서', icon: 'description' }].map(t => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
+              tab === t.key
+                ? 'bg-white dark:bg-slate-900 text-primary dark:text-white shadow-sm'
+                : 'text-on-surface-variant dark:text-slate-400 hover:text-primary dark:hover:text-white'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">{t.icon}</span>{t.label}
+          </button>
+        ))}
+      </div>
+
+      {loading && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1,2,3].map(i => <div key={i} className="card p-6 animate-pulse h-40"><div className="h-4 bg-surface-container dark:bg-slate-700 rounded w-2/3 mb-3"/><div className="h-3 bg-surface-container dark:bg-slate-700 rounded w-full mb-2"/><div className="h-3 bg-surface-container dark:bg-slate-700 rounded w-4/5"/></div>)}
+        </div>
+      )}
+
+      {/* Portfolio list */}
+      {!loading && tab === 'portfolio' && (
+        portfolios.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {portfolios.map(p => <PortfolioCard key={p.id} p={p} onDelete={handleDeletePortfolio} />)}
+          </div>
+        ) : (
+          <div className="card p-16 text-center">
+            <span className="material-symbols-outlined text-[64px] text-outline dark:text-slate-600 mb-4">work_outline</span>
+            <p className="text-xl font-bold text-primary dark:text-white font-['Space_Grotesk']">포트폴리오가 없습니다</p>
+            <p className="text-on-surface-variant dark:text-slate-400 text-sm mt-2 mb-6">GitHub 링크나 PPT 파일로 AI가 자동으로 만들어드립니다.</p>
+            <button onClick={() => { setShowGenModal(true); setDraft(null) }} className="btn-primary mx-auto">
+              <span className="material-symbols-outlined text-[18px]">auto_awesome</span>AI로 만들기
+            </button>
+          </div>
+        )
+      )}
+
+      {/* Resume list */}
+      {!loading && tab === 'resume' && (
+        resumes.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {resumes.map(r => (
+              <div key={r.id} className="card p-5">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h4 className="font-bold text-primary dark:text-white">{r.title}</h4>
+                    <p className="text-label-md text-outline dark:text-slate-400">{r.targetJob}</p>
+                  </div>
+                </div>
+                {r.summary && <p className="text-sm text-on-surface-variant dark:text-slate-400 mb-3 line-clamp-2">{r.summary}</p>}
+                <div className="flex flex-wrap gap-1.5 mb-4">
+                  {r.skills?.slice(0,4).map(s => (
+                    <span key={s} className="text-[10px] px-2 py-0.5 bg-secondary-container/30 dark:bg-secondary-fixed/10 text-on-secondary-container dark:text-secondary-fixed rounded-full">{s}</span>
+                  ))}
+                </div>
+                <p className="text-label-md text-outline dark:text-slate-400 mb-3">연결된 프로젝트 {r.portfolios?.length ?? 0}개</p>
+                <div className="flex gap-2">
+                  <button onClick={() => handleDownloadPdf(r.id, r.title)} className="flex-1 py-2.5 bg-primary dark:bg-primary-container text-white rounded-xl text-label-md font-bold flex items-center justify-center gap-1.5 hover:scale-[1.02] active:scale-95 transition-transform">
+                    <span className="material-symbols-outlined text-[16px]">download</span>PDF
+                  </button>
+                  <button onClick={async () => { await deleteResume(r.id); loadData() }} className="py-2.5 px-3 border border-error/30 text-error rounded-xl hover:bg-error-container dark:hover:bg-error/20 transition-colors">
+                    <span className="material-symbols-outlined text-[16px]">delete</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="card p-16 text-center">
+            <span className="material-symbols-outlined text-[64px] text-outline dark:text-slate-600 mb-4">description</span>
+            <p className="text-xl font-bold text-primary dark:text-white font-['Space_Grotesk']">이력서가 없습니다</p>
+            <p className="text-on-surface-variant dark:text-slate-400 text-sm mt-2 mb-6">포트폴리오를 연결해 이력서를 자동으로 완성하세요.</p>
+            <button onClick={() => setShowResumeForm(true)} className="btn-primary mx-auto">
+              <span className="material-symbols-outlined text-[18px]">add</span>이력서 생성
+            </button>
+          </div>
+        )
+      )}
+
+      {/* ── AI Generate Modal ── */}
+      {showGenModal && (
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50 flex items-end sm:items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) { setShowGenModal(false); setDraft(null) }}}>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900">
+              <h3 className="font-['Space_Grotesk'] text-lg font-bold text-primary dark:text-white flex items-center gap-2">
+                <span className="material-symbols-outlined text-secondary dark:text-secondary-fixed">auto_awesome</span>AI 포트폴리오 생성
+              </h3>
+              <button onClick={() => { setShowGenModal(false); setDraft(null) }} className="p-2 rounded-full hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
+                <span className="material-symbols-outlined text-outline dark:text-slate-400">close</span>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {!draft ? (
+                <>
+                  {/* GitHub input */}
+                  <div>
+                    <p className="font-bold text-sm text-primary dark:text-white mb-2">GitHub 저장소</p>
+                    <div className="flex gap-2">
+                      <input
+                        value={githubUrl}
+                        onChange={e => setGithubUrl(e.target.value)}
+                        placeholder="https://github.com/username/repo"
+                        className="flex-1 px-4 py-2.5 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      />
+                      <button
+                        onClick={handleGithubGenerate}
+                        disabled={genLoading || !githubUrl.trim()}
+                        className="px-4 py-2.5 bg-primary dark:bg-primary-container text-white rounded-xl text-sm font-bold disabled:opacity-50 hover:scale-[1.02] active:scale-95 transition-transform"
+                      >
+                        {genLoading ? '분석 중...' : '분석'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-px bg-outline-variant dark:bg-slate-700" />
+                    <span className="text-label-md text-outline dark:text-slate-500">또는</span>
+                    <div className="flex-1 h-px bg-outline-variant dark:bg-slate-700" />
+                  </div>
+
+                  {/* File upload */}
+                  <div>
+                    <p className="font-bold text-sm text-primary dark:text-white mb-2">파일 업로드 (PDF · PPTX)</p>
+                    <input type="file" accept=".pdf,.pptx" ref={fileRef} className="hidden" onChange={e => e.target.files[0] && handleFileGenerate(e.target.files[0])} />
+                    <button
+                      onClick={() => fileRef.current?.click()}
+                      disabled={genLoading}
+                      className="w-full py-8 border-2 border-dashed border-outline-variant dark:border-slate-700 rounded-2xl text-on-surface-variant dark:text-slate-400 hover:border-primary dark:hover:border-secondary-fixed hover:text-primary dark:hover:text-secondary-fixed transition-colors disabled:opacity-50 flex flex-col items-center gap-2"
+                    >
+                      <span className="material-symbols-outlined text-3xl">{genLoading ? 'hourglass_empty' : 'upload_file'}</span>
+                      <span className="text-sm font-medium">{genLoading ? 'AI 분석 중...' : '파일을 드래그하거나 클릭해 업로드'}</span>
+                    </button>
+                  </div>
+
+                  {genError && <p className="text-error text-sm bg-error-container dark:bg-error/20 px-4 py-3 rounded-xl">{genError}</p>}
+                </>
+              ) : (
+                /* Draft preview */
+                <>
+                  <div className="p-4 bg-secondary-container/20 dark:bg-secondary-fixed/10 rounded-2xl border border-secondary-fixed/30 mb-2">
+                    <p className="text-label-md text-outline dark:text-slate-400 mb-1">AI가 생성한 초안입니다. 저장 후 수정할 수 있습니다.</p>
+                  </div>
+                  {[
+                    { label: '제목', val: draft.title },
+                    { label: '역할', val: draft.role },
+                    { label: '설명', val: draft.description },
+                    { label: '기술 스택', val: draft.techStack?.join(', ') },
+                    { label: '상태', val: draft.status === 'COMPLETED' ? '완료' : '진행 중' },
+                  ].map(f => f.val && (
+                    <div key={f.label} className="space-y-1">
+                      <p className="text-label-md text-outline dark:text-slate-400">{f.label}</p>
+                      <p className="text-sm text-on-surface dark:text-white bg-surface-container-low dark:bg-slate-800 px-3 py-2 rounded-lg">{f.val}</p>
+                    </div>
+                  ))}
+                  {genError && <p className="text-error text-sm bg-error-container dark:bg-error/20 px-4 py-3 rounded-xl">{genError}</p>}
+                  <div className="flex gap-3 pt-2">
+                    <button onClick={() => setDraft(null)} className="flex-1 py-3 border border-outline-variant dark:border-slate-700 text-on-surface-variant dark:text-slate-300 rounded-xl text-sm font-bold hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
+                      다시 생성
+                    </button>
+                    <button onClick={handleSaveDraft} className="flex-1 py-3 bg-primary dark:bg-primary-container text-white rounded-xl text-sm font-bold hover:scale-[1.02] active:scale-95 transition-transform">
+                      저장하기
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Resume create modal ── */}
+      {showResumeForm && (
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50 flex items-end sm:items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setShowResumeForm(false) }}>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900">
+              <h3 className="font-['Space_Grotesk'] text-lg font-bold text-primary dark:text-white flex items-center gap-2">
+                <span className="material-symbols-outlined text-secondary dark:text-secondary-fixed">description</span>이력서 생성
+              </h3>
+              <button onClick={() => setShowResumeForm(false)} className="p-2 rounded-full hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
+                <span className="material-symbols-outlined text-outline dark:text-slate-400">close</span>
+              </button>
+            </div>
+            <form onSubmit={handleCreateResume} className="p-6 space-y-4">
+              {[
+                { key: 'title', label: '이력서 제목', placeholder: '예: 백엔드 개발자 지원' },
+                { key: 'targetJob', label: '희망 직무', placeholder: '예: 백엔드 개발자' },
+                { key: 'skills', label: '보유 기술 (쉼표 구분)', placeholder: '예: Java, Spring Boot, MySQL' },
+              ].map(f => (
+                <div key={f.key}>
+                  <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">{f.label}</label>
+                  <input
+                    value={resumeForm[f.key]}
+                    onChange={e => setResumeForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                    placeholder={f.placeholder}
+                    className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    required={f.key === 'title'}
+                  />
+                </div>
+              ))}
+              <div>
+                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">자기소개</label>
+                <textarea
+                  value={resumeForm.summary}
+                  onChange={e => setResumeForm(prev => ({ ...prev, summary: e.target.value }))}
+                  placeholder="간략한 자기소개를 작성해주세요."
+                  rows={3}
+                  className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                />
+              </div>
+              {portfolios.length > 0 && (
+                <div>
+                  <p className="text-label-md text-on-surface-variant dark:text-slate-400 mb-2">연결할 포트폴리오 ({portfolios.length}개 자동 연결)</p>
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {portfolios.slice(0, 3).map(p => (
+                      <div key={p.id} className="flex items-center gap-2 text-sm text-on-surface dark:text-slate-300 bg-surface-container-low dark:bg-slate-800 px-3 py-2 rounded-lg">
+                        <span className="material-symbols-outlined text-[14px] text-secondary dark:text-secondary-fixed">check_circle</span>{p.title}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowResumeForm(false)} className="flex-1 py-3 border border-outline-variant dark:border-slate-700 text-on-surface-variant dark:text-slate-300 rounded-xl text-sm font-bold hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
+                  취소
+                </button>
+                <button type="submit" className="flex-1 py-3 bg-primary dark:bg-primary-container text-white rounded-xl text-sm font-bold hover:scale-[1.02] active:scale-95 transition-transform">
+                  생성하기
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </Layout>
+  )
+}

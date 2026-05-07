@@ -1,13 +1,26 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import useAuthStore from '../../store/authStore'
 import useThemeStore from '../../store/themeStore'
+
+const LANGUAGES = [
+  { code: 'ko', label: '한국어', flag: '🇰🇷' },
+  { code: 'en', label: 'English', flag: '🇺🇸' },
+  { code: 'zh', label: '中文',   flag: '🇨🇳' },
+  { code: 'ja', label: '日本語', flag: '🇯🇵' },
+  { code: 'vi', label: 'Tiếng Việt', flag: '🇻🇳' },
+]
 
 export default function TopNav({ title }) {
   const { user, logout } = useAuthStore()
   const { dark, toggle } = useThemeStore()
+  const { i18n } = useTranslation()
   const navigate = useNavigate()
   const [showMenu, setShowMenu] = useState(false)
+  const [showLang, setShowLang] = useState(false)
+
+  const currentLang = LANGUAGES.find(l => l.code === i18n.language) ?? LANGUAGES[0]
 
   const handleLogout = () => {
     logout()
@@ -48,6 +61,37 @@ export default function TopNav({ title }) {
             placeholder="검색..."
             type="text"
           />
+        </div>
+
+        {/* Language selector */}
+        <div className="relative">
+          <button
+            onClick={() => setShowLang(v => !v)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium text-on-surface-variant dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors active:scale-95"
+          >
+            <span>{currentLang.flag}</span>
+            <span className="hidden sm:inline text-label-md">{currentLang.code.toUpperCase()}</span>
+            <span className="material-symbols-outlined text-[14px]">expand_more</span>
+          </button>
+          {showLang && (
+            <div className="absolute right-0 top-11 bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-100 dark:border-slate-800 py-1 w-44 z-50">
+              {LANGUAGES.map(lang => (
+                <button
+                  key={lang.code}
+                  onClick={() => { i18n.changeLanguage(lang.code); setShowLang(false) }}
+                  className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-3 hover:bg-surface-container-low dark:hover:bg-slate-800 transition-colors ${
+                    i18n.language === lang.code ? 'text-primary dark:text-secondary-fixed font-bold' : 'text-on-surface dark:text-slate-300'
+                  }`}
+                >
+                  <span>{lang.flag}</span>
+                  <span>{lang.label}</span>
+                  {i18n.language === lang.code && (
+                    <span className="material-symbols-outlined text-[16px] ml-auto">check</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Dark mode toggle */}
