@@ -5,6 +5,7 @@ import {
   generateFromGithub, generateFromFile
 } from '../api/portfolio'
 import { getResumes, createResume, downloadResumePdf, deleteResume } from '../api/resume'
+import { generateCoverLetter } from '../api/assistant'
 
 const STATUS_LABEL = { IN_PROGRESS: '진행 중', COMPLETED: '완료' }
 const STATUS_COLOR = {
@@ -12,12 +13,15 @@ const STATUS_COLOR = {
   COMPLETED:   'bg-surface-container dark:bg-slate-700 text-on-surface-variant dark:text-slate-300',
 }
 
-function PortfolioCard({ p, onDelete }) {
+function PortfolioCard({ p, onDelete, onClick }) {
   return (
-    <div className="card p-5 group relative">
+    <div
+      onClick={onClick}
+      className="card p-5 group relative cursor-pointer hover:shadow-md hover:border-primary/30 dark:hover:border-secondary-fixed/30 transition-all active:scale-[0.98]"
+    >
       <div className="flex items-start justify-between mb-3">
-        <div className="flex-1 min-w-0 mr-3">
-          <h4 className="font-bold text-primary dark:text-white truncate">{p.title}</h4>
+        <div className="flex-1 min-w-0 mr-8">
+          <h4 className="font-bold text-primary dark:text-white truncate group-hover:text-primary dark:group-hover:text-secondary-fixed transition-colors">{p.title}</h4>
           <p className="text-label-md text-outline dark:text-slate-400">{p.role}</p>
         </div>
         <span className={`text-[10px] font-bold px-2 py-1 rounded-full shrink-0 ${STATUS_COLOR[p.status]}`}>
@@ -37,17 +41,110 @@ function PortfolioCard({ p, onDelete }) {
       <div className="flex items-center gap-2 text-label-md text-outline dark:text-slate-500">
         {p.startDate && <span>{p.startDate} ~ {p.endDate ?? '현재'}</span>}
         {p.githubUrl && (
-          <a href={p.githubUrl} target="_blank" rel="noreferrer" className="ml-auto flex items-center gap-1 text-primary dark:text-secondary-fixed hover:underline">
+          <span className="ml-auto flex items-center gap-1 text-primary dark:text-secondary-fixed">
             <span className="material-symbols-outlined text-[14px]">code</span>GitHub
-          </a>
+          </span>
         )}
       </div>
+      {/* 삭제 버튼 — 클릭 버블 차단 */}
       <button
-        onClick={() => onDelete(p.id)}
+        onClick={e => { e.stopPropagation(); onDelete(p.id) }}
         className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg bg-error-container dark:bg-error/20 text-error hover:scale-110 transition-all"
       >
         <span className="material-symbols-outlined text-[16px]">delete</span>
       </button>
+    </div>
+  )
+}
+
+function PortfolioDetailModal({ p, onClose, onDelete }) {
+  if (!p) return null
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50 flex items-end sm:items-center justify-center p-4"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+        {/* 헤더 */}
+        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between sticky top-0 bg-white dark:bg-slate-900">
+          <div className="flex-1 min-w-0 pr-3">
+            <h3 className="font-['Space_Grotesk'] text-lg font-bold text-primary dark:text-white">{p.title}</h3>
+            <p className="text-label-md text-outline dark:text-slate-400 mt-0.5">{p.role}</p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className={`text-[10px] font-bold px-3 py-1.5 rounded-full ${STATUS_COLOR[p.status]}`}>
+              {STATUS_LABEL[p.status]}
+            </span>
+            <button onClick={onClose} className="p-2 rounded-full hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
+              <span className="material-symbols-outlined text-outline dark:text-slate-400">close</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {/* 기간 */}
+          {p.startDate && (
+            <div className="flex items-center gap-2 text-sm text-on-surface-variant dark:text-slate-400">
+              <span className="material-symbols-outlined text-[18px] text-primary dark:text-secondary-fixed">calendar_today</span>
+              {p.startDate} ~ {p.endDate ?? '진행 중'}
+            </div>
+          )}
+
+          {/* 설명 */}
+          {p.description && (
+            <div>
+              <p className="text-label-md text-outline dark:text-slate-500 mb-2">프로젝트 설명</p>
+              <p className="text-sm text-on-surface dark:text-slate-300 leading-relaxed bg-surface-container-low dark:bg-slate-800 p-4 rounded-xl">
+                {p.description}
+              </p>
+            </div>
+          )}
+
+          {/* 기술 스택 */}
+          {p.techStack?.length > 0 && (
+            <div>
+              <p className="text-label-md text-outline dark:text-slate-500 mb-2">기술 스택</p>
+              <div className="flex flex-wrap gap-2">
+                {p.techStack.map(t => (
+                  <span key={t} className="px-3 py-1.5 bg-secondary-container/20 dark:bg-secondary-fixed/10 text-on-secondary-container dark:text-secondary-fixed rounded-full text-sm font-medium border border-secondary-fixed/20">
+                    {t}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 링크 */}
+          {(p.githubUrl || p.deployUrl) && (
+            <div className="space-y-2">
+              {p.githubUrl && (
+                <a href={p.githubUrl} target="_blank" rel="noreferrer"
+                  className="flex items-center gap-3 p-3 bg-surface-container-low dark:bg-slate-800 rounded-xl hover:bg-surface-container dark:hover:bg-slate-700 transition-colors group">
+                  <span className="material-symbols-outlined text-primary dark:text-secondary-fixed">code</span>
+                  <span className="text-sm text-primary dark:text-secondary-fixed font-medium truncate group-hover:underline">{p.githubUrl}</span>
+                  <span className="material-symbols-outlined text-[16px] text-outline dark:text-slate-400 ml-auto shrink-0">open_in_new</span>
+                </a>
+              )}
+              {p.deployUrl && (
+                <a href={p.deployUrl} target="_blank" rel="noreferrer"
+                  className="flex items-center gap-3 p-3 bg-surface-container-low dark:bg-slate-800 rounded-xl hover:bg-surface-container dark:hover:bg-slate-700 transition-colors group">
+                  <span className="material-symbols-outlined text-primary dark:text-secondary-fixed">launch</span>
+                  <span className="text-sm text-primary dark:text-secondary-fixed font-medium truncate group-hover:underline">{p.deployUrl}</span>
+                  <span className="material-symbols-outlined text-[16px] text-outline dark:text-slate-400 ml-auto shrink-0">open_in_new</span>
+                </a>
+              )}
+            </div>
+          )}
+
+          {/* 삭제 버튼 */}
+          <button
+            onClick={() => { onDelete(p.id); onClose() }}
+            className="w-full py-3 border border-error/30 text-error rounded-xl text-sm font-bold hover:bg-error-container dark:hover:bg-error/20 transition-colors flex items-center justify-center gap-2"
+          >
+            <span className="material-symbols-outlined text-[18px]">delete</span>포트폴리오 삭제
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -66,9 +163,17 @@ export default function Technical() {
   const [genError, setGenError] = useState('')
   const fileRef = useRef()
 
+  // Portfolio detail modal
+  const [selectedPortfolio, setSelectedPortfolio] = useState(null)
+
   // Resume create state
   const [showResumeForm, setShowResumeForm] = useState(false)
   const [resumeForm, setResumeForm] = useState({ title: '', summary: '', skills: '', targetJob: '', portfolioIds: [] })
+
+  // 자기소개서 AI 생성 state
+  const [coverLoading, setCoverLoading] = useState(false)
+  const [coverCompany, setCoverCompany] = useState('')
+  const [coverJobTitle, setCoverJobTitle] = useState('')
 
   useEffect(() => {
     loadData()
@@ -120,24 +225,26 @@ export default function Technical() {
 
   const handleSaveDraft = async () => {
     if (!draft) return
+    if (!draft.title?.trim()) { setGenError('제목이 비어있습니다. AI가 분석에 실패했을 수 있습니다.'); return }
+    if (!draft.role?.trim()) { setGenError('역할이 비어있습니다. 직접 입력 후 저장해 주세요.'); return }
     try {
       await createPortfolio({
-        title: draft.title,
-        description: draft.description,
-        role: draft.role,
-        techStack: draft.techStack?.join(', '),
-        startDate: draft.startDate,
-        endDate: draft.endDate,
-        githubUrl: draft.githubUrl,
-        deployUrl: draft.deployUrl,
+        title: draft.title.trim(),
+        description: draft.description ?? '',
+        role: draft.role.trim(),
+        techStack: draft.techStack?.join(', ') ?? '',
+        startDate: draft.startDate ?? null,
+        endDate: draft.endDate ?? null,
+        githubUrl: draft.githubUrl ?? null,
+        deployUrl: draft.deployUrl ?? null,
         status: draft.status ?? 'COMPLETED',
       })
       setShowGenModal(false)
       setDraft(null)
       setGithubUrl('')
       loadData()
-    } catch {
-      setGenError('저장 중 오류가 발생했습니다.')
+    } catch (err) {
+      setGenError(err?.message || '저장 중 오류가 발생했습니다.')
     }
   }
 
@@ -224,7 +331,7 @@ export default function Technical() {
       {!loading && tab === 'portfolio' && (
         portfolios.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {portfolios.map(p => <PortfolioCard key={p.id} p={p} onDelete={handleDeletePortfolio} />)}
+            {portfolios.map(p => <PortfolioCard key={p.id} p={p} onDelete={handleDeletePortfolio} onClick={() => setSelectedPortfolio(p)} />)}
           </div>
         ) : (
           <div className="card p-16 text-center">
@@ -401,13 +508,68 @@ export default function Technical() {
                   />
                 </div>
               ))}
+              {/* AI 자기소개서 생성 */}
+              <div className="p-4 bg-primary/5 dark:bg-primary-container/20 rounded-2xl border border-primary/20 dark:border-primary-container/40 space-y-3">
+                <p className="font-bold text-sm text-primary dark:text-white flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
+                  AI 자기소개서 자동 생성
+                </p>
+                <p className="text-label-md text-on-surface-variant dark:text-slate-400">
+                  지원 회사와 직무를 입력하면 AI가 포트폴리오·성적·수상내역을 분석해 맞춤 자기소개서를 작성합니다.
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    value={coverCompany}
+                    onChange={e => setCoverCompany(e.target.value)}
+                    placeholder="지원 회사 (예: 카카오)"
+                    className="px-3 py-2.5 bg-white dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                  <input
+                    value={coverJobTitle}
+                    onChange={e => setCoverJobTitle(e.target.value)}
+                    placeholder="직무 (예: 백엔드 개발자)"
+                    className="px-3 py-2.5 bg-white dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+                <button
+                  type="button"
+                  disabled={coverLoading || !coverCompany.trim() || !coverJobTitle.trim()}
+                  onClick={async () => {
+                    setCoverLoading(true)
+                    try {
+                      const res = await generateCoverLetter({
+                        companyName: coverCompany.trim(),
+                        jobTitle: coverJobTitle.trim(),
+                        portfolioIds: portfolios.slice(0, 3).map(p => p.id),
+                      })
+                      setResumeForm(prev => ({ ...prev, summary: res.data.coverLetter }))
+                    } catch {
+                      alert('자기소개서 생성 중 오류가 발생했습니다.')
+                    } finally {
+                      setCoverLoading(false)
+                    }
+                  }}
+                  className="w-full py-2.5 bg-primary dark:bg-primary-container text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {coverLoading
+                    ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />AI 작성 중...</>
+                    : <><span className="material-symbols-outlined text-[18px]">edit_note</span>자기소개서 생성</>
+                  }
+                </button>
+              </div>
+
               <div>
-                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">자기소개</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-label-md text-on-surface-variant dark:text-slate-400">자기소개서</label>
+                  {resumeForm.summary && (
+                    <span className="text-label-md text-outline dark:text-slate-500">{resumeForm.summary.length}자</span>
+                  )}
+                </div>
                 <textarea
                   value={resumeForm.summary}
                   onChange={e => setResumeForm(prev => ({ ...prev, summary: e.target.value }))}
-                  placeholder="간략한 자기소개를 작성해주세요."
-                  rows={3}
+                  placeholder="AI로 생성하거나 직접 작성해주세요."
+                  rows={6}
                   className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
                 />
               </div>
@@ -434,6 +596,15 @@ export default function Technical() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* 포트폴리오 상세 모달 */}
+      {selectedPortfolio && (
+        <PortfolioDetailModal
+          p={selectedPortfolio}
+          onClose={() => setSelectedPortfolio(null)}
+          onDelete={(id) => { handleDeletePortfolio(id); setSelectedPortfolio(null) }}
+        />
       )}
     </Layout>
   )

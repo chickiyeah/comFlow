@@ -6,7 +6,6 @@ import com.campusflow.domain.grade.service.GradeService;
 import com.campusflow.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,15 +18,15 @@ public class GradeController {
     private final GradeService gradeService;
 
     @GetMapping("/me")
-    public ApiResponse<GradeSummaryResponse> getMyGrades(@AuthenticationPrincipal UserDetails userDetails) {
-        return ApiResponse.ok(gradeService.getMyGrades(userDetails.getUsername()));
+    public ApiResponse<GradeSummaryResponse> getMyGrades(@AuthenticationPrincipal String username) {
+        return ApiResponse.ok(gradeService.getMyGrades(username));
     }
 
     @GetMapping("/me/semester")
     public ApiResponse<List<GradeResponse>> getGradesBySemester(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal String username,
             @RequestParam int year,
             @RequestParam int semester) {
-        return ApiResponse.ok(gradeService.getGradesBySemester(userDetails.getUsername(), year, semester));
+        return ApiResponse.ok(gradeService.getGradesBySemester(username, year, semester));
     }
 }

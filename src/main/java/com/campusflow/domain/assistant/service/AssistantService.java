@@ -2,7 +2,11 @@ package com.campusflow.domain.assistant.service;
 
 import com.campusflow.domain.ai.service.AiFacadeService;
 import com.campusflow.domain.assistant.dto.AssistantResponse;
+import com.campusflow.domain.assistant.dto.CoverLetterRequest;
+import com.campusflow.domain.assistant.dto.CoverLetterResponse;
 import com.campusflow.domain.attendance.entity.AttendanceStatus;
+import com.campusflow.domain.award.repository.AwardRepository;
+import com.campusflow.domain.portfolio.entity.Portfolio;
 import com.campusflow.domain.attendance.repository.AttendanceRepository;
 import com.campusflow.domain.grade.repository.GradeRepository;
 import com.campusflow.domain.graduation.repository.GraduationRequirementRepository;
@@ -38,6 +42,7 @@ public class AssistantService {
     private final AttendanceRepository attendanceRepository;
     private final GraduationRequirementRepository requirementRepository;
     private final PortfolioRepository portfolioRepository;
+    private final AwardRepository awardRepository;
 
     private static final String SYSTEM_PROMPT = """
             당신은 2년제 컴퓨터정보과 학생 전담 AI 어드바이저입니다.
@@ -170,6 +175,85 @@ public class AssistantService {
                     gpa != null ? gpa : 0.0,
                     "데이터 분석 중 오류가 발생했습니다.", List.of(), List.of(), List.of(), List.of(), List.of());
         }
+    }
+
+    public CoverLetterResponse generateCoverLetter(String username, CoverLetterRequest req) {
+        Student student = getStudentByUsername(username);
+        Long sid = student.getId();
+
+        // 성적 요약
+        Double gpa = gradeRepository.calculateGpa(sid);
+        int totalCredits = gradeRepository
+                .findByStudentIdOrderByGradeYearAscGradeSemesterAsc(sid)
+                .stream().mapToInt(g -> g.getCredits()).sum();
+
+        // 출석률
+        long present = attendanceRepository.countByStudentIdAndStatus(sid, AttendanceStatus.PRESENT);
+        long total = present
+                + attendanceRepository.countByStudentIdAndStatus(sid, AttendanceStatus.LATE)
+                + attendanceRepository.countByStudentIdAndStatus(sid, AttendanceStatus.ABSENT);
+        int attendanceRate = total > 0 ? (int) Math.round((double) present / total * 100) : 100;
+
+        // 수상 내역
+        String awards = awardRepository.findByStudentIdOrderByAwardDateDesc(sid).stream()
+                .map(a -> a.getTitle() + "(" + a.getOrganization() + "," + a.getLevel().getLabel() + ")")
+                .collect(Collectors.joining(", "));
+
+        // 포트폴리오 (지정된 것만, 없으면 전체)
+        List<Portfolio> portfolios = req.portfolioIds() != null && !req.portfolioIds().isEmpty()
+                ? portfolioRepository.findByStudentIdOrderByStartDateDesc(sid).stream()
+                    .filter(p -> req.portfolioIds().contains(p.getId())).toList()
+                : portfolioRepository.findByStudentIdOrderByStartDateDesc(sid);
+
+        String portfolioContext = portfolios.stream()
+                .map(p -> String.format("- %s (%s) | 기술: %s | %s",
+                        p.getTitle(), p.getRole(),
+                        p.getTechStack() != null ? p.getTechStack() : "없음",
+                        p.getDescription() != null ? p.getDescription().substring(0, Math.min(100, p.getDescription().length())) : ""))
+                .collect(Collectors.joining("\n"));
+
+        String context = String.format("""
+                지원자 정보:
+                - 이름: %s
+                - 학과: %s | %d학년 %d학기
+                - GPA: %.2f / 4.5
+                - 이수 학점: %d학점
+                - 출석률: %d%%
+                - 수상 내역: %s
+
+                주요 프로젝트:
+                %s
+
+                지원 정보:
+                - 지원 회사: %s
+                - 희망 직무: %s
+                """,
+                student.getName(), student.getDepartment(),
+                student.getGrade(), student.getSemester(),
+                gpa != null ? gpa : 0.0, totalCredits, attendanceRate,
+                awards.isBlank() ? "없음" : awards,
+                portfolioContext.isBlank() ? "없음" : portfolioContext,
+                req.companyName(), req.jobTitle()
+        );
+
+        String systemPrompt = """
+                당신은 IT 취업 자기소개서 작성 전문가입니다.
+                지원자의 실제 데이터를 바탕으로 지원 회사와 직무에 맞는 자기소개서를 작성하세요.
+
+                작성 원칙:
+                1. 실제 프로젝트 경험과 기술스택을 구체적으로 언급하세요
+                2. 지원 회사와 직무에 맞게 강점을 부각하세요
+                3. 학점·출석률·수상내역 등 정량적 데이터를 활용하세요
+                4. 자연스러운 한국어로 4~5문단, 약 600~800자로 작성하세요
+                5. "안녕하세요"로 시작하지 말고 지원 동기나 핵심 강점으로 시작하세요
+
+                자기소개서 본문만 출력하세요. JSON이나 마크다운 없이 순수 텍스트로만 응답하세요.
+                """;
+
+        String coverLetter = aiFacadeService.ask(systemPrompt,
+                "다음 지원자 정보를 바탕으로 자기소개서를 작성해주세요:\n\n" + context);
+
+        return new CoverLetterResponse(coverLetter.trim());
     }
 
     private Student getStudentByUsername(String username) {

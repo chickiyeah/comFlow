@@ -1,6 +1,7 @@
 package com.campusflow.global.exception;
 
 import com.campusflow.global.response.ApiResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -37,6 +39,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneral(Exception e) {
-        return ResponseEntity.internalServerError().body(ApiResponse.fail("서버 오류가 발생했습니다."));
+        log.error("[500] {} - {}", e.getClass().getSimpleName(), e.getMessage(), e);
+        return ResponseEntity.internalServerError()
+                .body(ApiResponse.fail("[" + e.getClass().getSimpleName() + "] " + e.getMessage()));
     }
 }

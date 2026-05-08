@@ -1,8 +1,11 @@
 package com.campusflow.domain.user.service;
 
+import com.campusflow.domain.student.entity.Student;
+import com.campusflow.domain.student.repository.StudentRepository;
 import com.campusflow.domain.user.dto.LoginRequest;
 import com.campusflow.domain.user.dto.RegisterRequest;
 import com.campusflow.domain.user.dto.TokenResponse;
+import com.campusflow.domain.user.entity.Role;
 import com.campusflow.domain.user.entity.User;
 import com.campusflow.domain.user.repository.UserRepository;
 import com.campusflow.global.exception.BusinessException;
@@ -22,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final StudentRepository studentRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider tokenProvider;
@@ -35,7 +39,6 @@ public class AuthService {
         if (userRepository.existsByEmail(request.email())) {
             throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
         }
-        // 이메일 인증 완료 여부 확인
         if (!emailVerificationService.isVerified(request.email())) {
             throw new BusinessException(ErrorCode.EMAIL_NOT_VERIFIED);
         }
@@ -48,6 +51,20 @@ public class AuthService {
                 .role(request.role())
                 .build();
         userRepository.save(user);
+
+        // 학생 역할이면 Student 엔티티도 생성 (grade/semester는 1학년 1학기 기본값)
+        if (request.role() == Role.ROLE_STUDENT) {
+            Student student = Student.builder()
+                    .user(user)
+                    .studentId(request.username())
+                    .name(request.name())
+                    .grade(1)
+                    .semester(1)
+                    .department("컴퓨터정보과")
+                    .email(request.email())
+                    .build();
+            studentRepository.save(student);
+        }
     }
 
     public TokenResponse login(LoginRequest request) {

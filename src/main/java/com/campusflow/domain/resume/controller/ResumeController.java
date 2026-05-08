@@ -13,7 +13,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.nio.charset.StandardCharsets;
@@ -28,40 +27,40 @@ public class ResumeController {
     private final PdfService pdfService;
 
     @GetMapping
-    public ApiResponse<List<ResumeResponse>> getMyResumes(@AuthenticationPrincipal UserDetails user) {
-        return ApiResponse.ok(resumeService.getMyResumes(user.getUsername()));
+    public ApiResponse<List<ResumeResponse>> getMyResumes(@AuthenticationPrincipal String username) {
+        return ApiResponse.ok(resumeService.getMyResumes(username));
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<ResumeResponse> getResume(@AuthenticationPrincipal UserDetails user,
+    public ApiResponse<ResumeResponse> getResume(@AuthenticationPrincipal String username,
                                                   @PathVariable Long id) {
-        return ApiResponse.ok(resumeService.getResume(user.getUsername(), id));
+        return ApiResponse.ok(resumeService.getResume(username, id));
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<ResumeResponse> create(@AuthenticationPrincipal UserDetails user,
+    public ApiResponse<ResumeResponse> create(@AuthenticationPrincipal String username,
                                                @Valid @RequestBody ResumeRequest request) {
-        return ApiResponse.ok(resumeService.create(user.getUsername(), request));
+        return ApiResponse.ok(resumeService.create(username, request));
     }
 
     @PutMapping("/{id}")
-    public ApiResponse<ResumeResponse> update(@AuthenticationPrincipal UserDetails user,
+    public ApiResponse<ResumeResponse> update(@AuthenticationPrincipal String username,
                                                @PathVariable Long id,
                                                @Valid @RequestBody ResumeRequest request) {
-        return ApiResponse.ok(resumeService.update(user.getUsername(), id, request));
+        return ApiResponse.ok(resumeService.update(username, id, request));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@AuthenticationPrincipal UserDetails user, @PathVariable Long id) {
-        resumeService.delete(user.getUsername(), id);
+    public void delete(@AuthenticationPrincipal String username, @PathVariable Long id) {
+        resumeService.delete(username, id);
     }
 
     @GetMapping("/{id}/pdf")
-    public ResponseEntity<byte[]> downloadPdf(@AuthenticationPrincipal UserDetails user,
+    public ResponseEntity<byte[]> downloadPdf(@AuthenticationPrincipal String username,
                                                @PathVariable Long id) {
-        ResumeResponse resume = resumeService.getResume(user.getUsername(), id);
+        ResumeResponse resume = resumeService.getResume(username, id);
         byte[] pdf = pdfService.generateResumePdf(resume);
 
         String filename = resume.title().replaceAll("[^a-zA-Z0-9가-힣]", "_") + ".pdf";

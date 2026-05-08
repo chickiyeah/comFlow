@@ -8,7 +8,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,20 +20,20 @@ public class AwardController {
     private final AwardService awardService;
 
     @GetMapping("/me")
-    public ApiResponse<List<AwardResponse>> getMyAwards(@AuthenticationPrincipal UserDetails user) {
-        return ApiResponse.ok(awardService.getMyAwards(user.getUsername()));
+    public ApiResponse<List<AwardResponse>> getMyAwards(@AuthenticationPrincipal String username) {
+        return ApiResponse.ok(awardService.getMyAwards(username));
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<AwardResponse> create(@AuthenticationPrincipal UserDetails user,
+    public ApiResponse<AwardResponse> create(@AuthenticationPrincipal String username,
                                               @Valid @RequestBody AwardRequest request) {
-        return ApiResponse.ok(awardService.create(user.getUsername(), request));
+        return ApiResponse.ok(awardService.create(username, request));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@AuthenticationPrincipal UserDetails user, @PathVariable Long id) {
-        awardService.delete(user.getUsername(), id);
+    public void delete(@AuthenticationPrincipal String username, @PathVariable Long id) {
+        awardService.delete(username, id);
     }
 }

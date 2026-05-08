@@ -13,7 +13,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -31,28 +30,28 @@ public class PortfolioController {
     private final PortfolioAiGeneratorService aiGeneratorService;
 
     @GetMapping
-    public ApiResponse<List<PortfolioResponse>> getMyPortfolios(@AuthenticationPrincipal UserDetails user) {
-        return ApiResponse.ok(portfolioService.getMyPortfolios(user.getUsername()));
+    public ApiResponse<List<PortfolioResponse>> getMyPortfolios(@AuthenticationPrincipal String username) {
+        return ApiResponse.ok(portfolioService.getMyPortfolios(username));
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<PortfolioResponse> create(@AuthenticationPrincipal UserDetails user,
+    public ApiResponse<PortfolioResponse> create(@AuthenticationPrincipal String username,
                                                   @Valid @RequestBody PortfolioRequest request) {
-        return ApiResponse.ok(portfolioService.create(user.getUsername(), request));
+        return ApiResponse.ok(portfolioService.create(username, request));
     }
 
     @PutMapping("/{id}")
-    public ApiResponse<PortfolioResponse> update(@AuthenticationPrincipal UserDetails user,
+    public ApiResponse<PortfolioResponse> update(@AuthenticationPrincipal String username,
                                                   @PathVariable Long id,
                                                   @Valid @RequestBody PortfolioRequest request) {
-        return ApiResponse.ok(portfolioService.update(user.getUsername(), id, request));
+        return ApiResponse.ok(portfolioService.update(username, id, request));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@AuthenticationPrincipal UserDetails user, @PathVariable Long id) {
-        portfolioService.delete(user.getUsername(), id);
+    public void delete(@AuthenticationPrincipal String username, @PathVariable Long id) {
+        portfolioService.delete(username, id);
     }
 
     /**
