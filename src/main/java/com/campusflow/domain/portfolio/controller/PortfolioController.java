@@ -8,6 +8,7 @@ import com.campusflow.domain.portfolio.service.FileParserService;
 import com.campusflow.domain.portfolio.service.GitHubService;
 import com.campusflow.domain.portfolio.service.PortfolioAiGeneratorService;
 import com.campusflow.domain.portfolio.service.PortfolioService;
+import com.campusflow.domain.user.service.GitHubTokenService;
 import com.campusflow.global.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class PortfolioController {
     private final GitHubService gitHubService;
     private final FileParserService fileParserService;
     private final PortfolioAiGeneratorService aiGeneratorService;
+    private final GitHubTokenService gitHubTokenService;
 
     @GetMapping
     public ApiResponse<List<PortfolioResponse>> getMyPortfolios(@AuthenticationPrincipal String username) {
@@ -61,8 +63,10 @@ public class PortfolioController {
      */
     @PostMapping("/generate/github")
     public ApiResponse<PortfolioAiDraft> generateFromGithub(
+            @AuthenticationPrincipal String username,
             @Valid @RequestBody GithubGenerateRequest request) {
-        String context = gitHubService.extractRepoContext(request.githubUrl());
+        String token = gitHubTokenService.getToken(username).orElse(null);
+        String context = gitHubService.extractRepoContext(request.githubUrl(), token);
         PortfolioAiDraft draft = aiGeneratorService.generateFromContext(
                 context, "GITHUB", request.githubUrl());
         return ApiResponse.ok(draft);

@@ -7,6 +7,7 @@ import {
 import { getResumes, createResume, downloadResumePdf, deleteResume } from '../api/resume'
 import { generateCoverLetter } from '../api/assistant'
 import { getCoverLetters, saveCoverLetter, updateCoverLetter, deleteCoverLetter } from '../api/coverLetter'
+import { getGithubTokenStatus, saveGithubToken, deleteGithubToken } from '../api/career'
 
 const STATUS_LABEL = { IN_PROGRESS: '진행 중', COMPLETED: '완료' }
 const STATUS_COLOR = {
@@ -168,6 +169,12 @@ export default function Technical() {
   // Portfolio detail modal
   const [selectedPortfolio, setSelectedPortfolio] = useState(null)
 
+  // GitHub token state
+  const [hasGhToken, setHasGhToken] = useState(false)
+  const [showTokenModal, setShowTokenModal] = useState(false)
+  const [tokenInput, setTokenInput] = useState('')
+  const [tokenSaving, setTokenSaving] = useState(false)
+
   // Resume create state
   const [showResumeForm, setShowResumeForm] = useState(false)
   const [resumeForm, setResumeForm] = useState({ title: '', summary: '', skills: '', targetJob: '', portfolioIds: [] })
@@ -189,6 +196,27 @@ export default function Technical() {
   useEffect(() => {
     loadData()
   }, [tab])
+
+  useEffect(() => {
+    getGithubTokenStatus().then(r => setHasGhToken(r.data?.data?.hasToken ?? false)).catch(() => {})
+  }, [])
+
+  const handleSaveToken = async () => {
+    if (!tokenInput.trim()) return
+    setTokenSaving(true)
+    try {
+      await saveGithubToken(tokenInput.trim())
+      setHasGhToken(true)
+      setShowTokenModal(false)
+      setTokenInput('')
+    } catch { /* ignore */ }
+    finally { setTokenSaving(false) }
+  }
+
+  const handleDeleteToken = async () => {
+    await deleteGithubToken()
+    setHasGhToken(false)
+  }
 
   const loadData = async () => {
     setLoading(true)
@@ -416,6 +444,34 @@ export default function Technical() {
       {loading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1,2,3].map(i => <div key={i} className="card p-6 animate-pulse h-40"><div className="h-4 bg-surface-container dark:bg-slate-700 rounded w-2/3 mb-3"/><div className="h-3 bg-surface-container dark:bg-slate-700 rounded w-full mb-2"/><div className="h-3 bg-surface-container dark:bg-slate-700 rounded w-4/5"/></div>)}
+        </div>
+      )}
+
+      {/* GitHub token banner */}
+      {tab === 'portfolio' && (
+        <div className={`flex items-center gap-3 p-3 rounded-xl mb-4 text-sm ${
+          hasGhToken
+            ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+            : 'bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700'
+        }`}>
+          <span className={`material-symbols-outlined text-[20px] ${hasGhToken ? 'text-green-600 dark:text-green-400' : 'text-outline dark:text-slate-400'}`}>
+            {hasGhToken ? 'lock_open' : 'lock'}
+          </span>
+          <span className={hasGhToken ? 'text-green-700 dark:text-green-300' : 'text-on-surface-variant dark:text-slate-400'}>
+            {hasGhToken ? 'GitHub 개인 토큰 등록됨 — 프라이빗 저장소 접근 가능' : 'GitHub 개인 토큰 미등록 — 퍼블릭 저장소만 분석 가능'}
+          </span>
+          <div className="ml-auto flex gap-2">
+            <button onClick={() => { setTokenInput(''); setShowTokenModal(true) }}
+              className="text-xs px-3 py-1 rounded-lg bg-primary/10 dark:bg-primary-container/20 text-primary dark:text-secondary-fixed font-semibold hover:bg-primary/20 transition-colors">
+              {hasGhToken ? '변경' : '등록'}
+            </button>
+            {hasGhToken && (
+              <button onClick={handleDeleteToken}
+                className="text-xs px-3 py-1 rounded-lg bg-error/10 dark:bg-error/20 text-error font-semibold hover:bg-error/20 transition-colors">
+                삭제
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -903,6 +959,37 @@ export default function Technical() {
           onClose={() => setSelectedPortfolio(null)}
           onDelete={(id) => { handleDeletePortfolio(id); setSelectedPortfolio(null) }}
         />
+      )}
+
+      {/* GitHub 토큰 설정 모달 */}
+      {showTokenModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowTokenModal(false)}>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+            <h3 className="font-['Space_Grotesk'] text-lg font-bold text-primary dark:text-white mb-1">GitHub 개인 액세스 토큰</h3>
+            <p className="text-sm text-on-surface-variant dark:text-slate-400 mb-4">
+              프라이빗 저장소의 AI 분석을 위해 필요합니다.<br />
+              GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens 에서 발급하세요.<br />
+              <span className="text-xs text-outline dark:text-slate-500">필요 권한: <code>Contents (read)</code></span>
+            </p>
+            <input
+              value={tokenInput}
+              onChange={e => setTokenInput(e.target.value)}
+              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+              type="password"
+              className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-white rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 mb-4"
+            />
+            <div className="flex gap-3">
+              <button onClick={() => setShowTokenModal(false)}
+                className="flex-1 py-2.5 border border-outline-variant dark:border-slate-700 dark:text-slate-300 rounded-xl text-sm font-semibold hover:bg-surface-container transition-colors">
+                취소
+              </button>
+              <button onClick={handleSaveToken} disabled={!tokenInput.trim() || tokenSaving}
+                className="flex-1 py-2.5 bg-primary dark:bg-primary-container text-white rounded-xl text-sm font-semibold shadow hover:scale-[1.01] active:scale-95 transition-transform disabled:opacity-50">
+                {tokenSaving ? '저장중...' : '저장'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </Layout>
   )

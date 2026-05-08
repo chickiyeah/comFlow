@@ -11,7 +11,7 @@ export default function Layout({ title, children }) {
         <SideNav />
       </div>
       <TopNav title={title} />
-      <main className="lg:ml-20 pt-16 px-4 pb-20 lg:px-container_padding lg:pb-6 min-h-screen">
+      <main className="lg:ml-20 pt-20 px-4 pb-20 lg:px-container_padding lg:pb-6 min-h-screen">
         {children}
       </main>
       <BottomNav />

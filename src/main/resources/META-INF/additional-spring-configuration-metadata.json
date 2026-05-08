@@ -1,0 +1,29 @@
+{
+  "properties": [
+    {
+      "name": "worknet.api.key",
+      "type": "java.lang.String",
+      "description": "워크넷 OpenAPI 인증키 (openapi.work.go.kr)"
+    },
+    {
+      "name": "qnet.api.key",
+      "type": "java.lang.String",
+      "description": "큐넷 국가자격 시험일정 API 인증키 (data.go.kr)"
+    },
+    {
+      "name": "mail.from",
+      "type": "java.lang.String",
+      "description": "메일 발신 주소"
+    },
+    {
+      "name": "chroma.host",
+      "type": "java.lang.String",
+      "description": "ChromaDB 호스트"
+    },
+    {
+      "name": "chroma.port",
+      "type": "java.lang.Integer",
+      "description": "ChromaDB 포트"
+    }
+  ]
+}

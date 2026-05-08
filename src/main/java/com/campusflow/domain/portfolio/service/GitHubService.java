@@ -37,17 +37,24 @@ public class GitHubService {
     );
 
     public String extractRepoContext(String githubUrl) {
+        return extractRepoContext(githubUrl, null);
+    }
+
+    public String extractRepoContext(String githubUrl, String token) {
         Matcher m = REPO_PATTERN.matcher(githubUrl);
         if (!m.find()) throw new IllegalArgumentException("GitHub URL 파싱 실패");
 
         String owner = m.group(1);
         String repo  = m.group(2);
 
-        RestClient client = RestClient.builder()
+        var builder = RestClient.builder()
                 .baseUrl(API_BASE)
                 .defaultHeader("Accept", "application/vnd.github+json")
-                .defaultHeader("User-Agent", "CampusFlow-App")
-                .build();
+                .defaultHeader("User-Agent", "CampusFlow-App");
+        if (token != null && !token.isBlank()) {
+            builder.defaultHeader("Authorization", "Bearer " + token);
+        }
+        RestClient client = builder.build();
 
         StringBuilder ctx = new StringBuilder();
         ctx.append("=== GitHub 저장소: ").append(owner).append("/").append(repo).append(" ===\n");
