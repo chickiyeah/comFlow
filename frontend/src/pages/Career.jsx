@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import Layout from '../components/layout/Layout'
 import { generateRoadmap } from '../api/roadmap'
 
@@ -10,6 +11,7 @@ const CERT_TYPE_STYLE = {
 const CERT_TYPE_LABEL = { REQUIRED: '필수', RECOMMENDED: '권장', OPTIONAL: '선택' }
 
 export default function Career() {
+  const { t } = useTranslation()
   const [jobTitle, setJobTitle] = useState('')
   const [useExternal, setUseExternal] = useState(true)
   const [loading, setLoading] = useState(false)
@@ -33,22 +35,22 @@ export default function Career() {
   }
 
   return (
-    <Layout title="진로 로드맵">
+    <Layout title={t('career.title')}>
       <div className="mb-6">
-        <h2 className="font-['Space_Grotesk'] text-2xl font-bold text-primary dark:text-white">직업 로드맵 생성</h2>
-        <p className="text-on-surface-variant dark:text-slate-400 text-sm mt-1">희망 직업을 입력하면 AI가 2년 4학기 학습 경로를 제안합니다.</p>
+        <h2 className="font-['Space_Grotesk'] text-2xl font-bold text-primary dark:text-white">{t('career.title')}</h2>
+        <p className="text-on-surface-variant dark:text-slate-400 text-sm mt-1">{t('career.subtitle')}</p>
       </div>
 
       {/* Input card */}
       <div className="card p-6 mb-6">
         <form onSubmit={handleGenerate} className="space-y-4">
           <div>
-            <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-2">희망 직업명</label>
+            <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-2">{t('career.title')}</label>
             <div className="flex gap-3">
               <input
                 value={jobTitle}
                 onChange={e => setJobTitle(e.target.value)}
-                placeholder="예: 백엔드 개발자, 데이터 분석가, AI 엔지니어"
+                placeholder={t('career.jobPlaceholder')}
                 className="flex-1 px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 dark:focus:ring-secondary-fixed/30 transition-all"
               />
               <button
@@ -56,7 +58,7 @@ export default function Career() {
                 disabled={loading || !jobTitle.trim()}
                 className="px-6 py-3 bg-primary dark:bg-primary-container text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
               >
-                {loading ? '생성 중...' : '로드맵 생성'}
+                {loading ? t('career.generating') : t('career.generateBtn')}
               </button>
             </div>
           </div>

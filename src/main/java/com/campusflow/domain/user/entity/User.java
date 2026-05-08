@@ -27,6 +27,9 @@ public class User {
     @Column(nullable = false, length = 20)
     private String name;
 
+    @Column(unique = true, length = 100)
+    private String email;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Role role;
@@ -36,10 +39,11 @@ public class User {
     private LocalDateTime createdAt;
 
     @Builder
-    public User(String username, String password, String name, Role role) {
+    public User(String username, String password, String name, String email, Role role) {
         this.username = username;
         this.password = password;
         this.name = name;
+        this.email = email;
         this.role = role;
     }
 }

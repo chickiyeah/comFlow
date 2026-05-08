@@ -25,16 +25,26 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider tokenProvider;
+    private final EmailVerificationService emailVerificationService;
 
     @Transactional
     public void register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.username())) {
             throw new BusinessException(ErrorCode.DUPLICATE_STUDENT_ID);
         }
+        if (userRepository.existsByEmail(request.email())) {
+            throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
+        }
+        // 이메일 인증 완료 여부 확인
+        if (!emailVerificationService.isVerified(request.email())) {
+            throw new BusinessException(ErrorCode.EMAIL_NOT_VERIFIED);
+        }
+
         User user = User.builder()
                 .username(request.username())
                 .password(passwordEncoder.encode(request.password()))
                 .name(request.name())
+                .email(request.email())
                 .role(request.role())
                 .build();
         userRepository.save(user);

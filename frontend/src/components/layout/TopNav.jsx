@@ -15,7 +15,7 @@ const LANGUAGES = [
 export default function TopNav({ title }) {
   const { user, logout } = useAuthStore()
   const { dark, toggle } = useThemeStore()
-  const { i18n } = useTranslation()
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const [showMenu, setShowMenu] = useState(false)
   const [showLang, setShowLang] = useState(false)
@@ -36,9 +36,9 @@ export default function TopNav({ title }) {
 
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2">
-          <span className="text-xl font-black tracking-tight text-primary dark:text-white font-['Space_Grotesk']">
+          <button onClick={() => navigate('/')} className="text-xl font-black tracking-tight text-primary dark:text-white font-['Space_Grotesk'] hover:opacity-80 transition-opacity active:scale-95">
             CampusFlow
-          </span>
+          </button>
           <span className="text-on-surface-variant text-label-md bg-surface-container dark:bg-slate-800 px-3 py-1 rounded-full hidden sm:inline border border-outline-variant/30">
             2024년 1학기
           </span>
@@ -58,7 +58,7 @@ export default function TopNav({ title }) {
           </span>
           <input
             className="pl-9 pr-4 py-2 bg-slate-100 dark:bg-slate-900 dark:border dark:border-slate-800 dark:text-on-surface border-none rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary-fixed/20 w-64 transition-all"
-            placeholder="검색..."
+            placeholder={t('common.search')}
             type="text"
           />
         </div>

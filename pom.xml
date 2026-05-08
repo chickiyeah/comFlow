@@ -88,6 +88,12 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- 이메일 발송 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
         <!-- PPT/PPTX 텍스트 추출 -->
         <dependency>
             <groupId>org.apache.poi</groupId>

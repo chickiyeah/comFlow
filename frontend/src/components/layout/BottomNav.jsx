@@ -1,23 +1,25 @@
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 
-const navItems = [
-  { path: '/',           icon: 'dashboard',      label: 'Dashboard'  },
-  { path: '/academic',   icon: 'school',         label: 'Academics'  },
-  { path: '/facilities', icon: 'corporate_fare', label: 'Facilities' },
-  { path: '/technical',  icon: 'description',    label: 'Docs'       },
-  { path: '/career',     icon: 'work',           label: 'Career'     },
+const NAV_ITEMS = [
+  { path: '/',           icon: 'dashboard',      key: 'dashboard'  },
+  { path: '/academic',   icon: 'school',         key: 'academic'   },
+  { path: '/facilities', icon: 'corporate_fare', key: 'facilities' },
+  { path: '/technical',  icon: 'description',    key: 'technical'  },
+  { path: '/career',     icon: 'work',           key: 'career'     },
 ]
 
 export default function BottomNav() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
+  const { t } = useTranslation()
 
   return (
     <nav className="fixed bottom-0 left-0 w-full z-50 lg:hidden flex justify-around items-center
       bg-white/80 dark:bg-slate-950/80 backdrop-blur-md
       border-t border-slate-200 dark:border-slate-800
       shadow-[0_-4px_20px_-5px_rgba(30,58,138,0.08)] h-16 px-2">
-      {navItems.map(({ path, icon, label }) => {
+      {NAV_ITEMS.map(({ path, icon, key }) => {
         const active = path === '/' ? pathname === '/' : pathname.startsWith(path)
         return (
           <button
@@ -30,7 +32,7 @@ export default function BottomNav() {
             }
           >
             <span className={`material-symbols-outlined ${active ? 'icon-fill' : ''}`}>{icon}</span>
-            <span className="font-['Space_Grotesk'] text-[10px] font-medium">{label}</span>
+            <span className="font-['Space_Grotesk'] text-[10px] font-medium">{t(`nav.${key}`)}</span>
           </button>
         )
       })}

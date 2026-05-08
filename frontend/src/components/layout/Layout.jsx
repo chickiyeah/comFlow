@@ -2,6 +2,7 @@ import SideNav from './SideNav'
 import TopNav from './TopNav'
 import BottomNav from './BottomNav'
 import SuggestionFab from '../common/SuggestionFab'
+import AssistantPanel from '../common/AssistantPanel'
 
 export default function Layout({ title, children }) {
   return (
@@ -10,11 +11,12 @@ export default function Layout({ title, children }) {
         <SideNav />
       </div>
       <TopNav title={title} />
-      <main className="lg:ml-20 pt-16 p-4 lg:p-container_padding min-h-screen pb-20 lg:pb-6">
+      <main className="lg:ml-20 pt-16 px-4 pb-20 lg:px-container_padding lg:pb-6 min-h-screen">
         {children}
       </main>
       <BottomNav />
       <SuggestionFab />
+      <AssistantPanel />
     </div>
   )
 }

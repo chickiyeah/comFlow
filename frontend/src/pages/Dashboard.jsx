@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import useAuthStore from '../store/authStore'
 import Layout from '../components/layout/Layout'
 
@@ -27,6 +28,7 @@ const FACILITIES = [
 export default function Dashboard() {
   const user = useAuthStore(s => s.user)
   const navigate = useNavigate()
+  const { t } = useTranslation()
 
   return (
     <Layout>
@@ -36,14 +38,14 @@ export default function Dashboard() {
           <span className="material-symbols-outlined text-[120px]">school</span>
         </div>
         <span className="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-2 py-0.5 rounded">컴퓨터정보과</span>
-        <h1 className="font-['Space_Grotesk'] text-xl font-black mt-2">안녕하세요, {user?.name ?? '학생'}님</h1>
+        <h1 className="font-['Space_Grotesk'] text-xl font-black mt-2">{t('dashboard.greeting', { name: user?.name ?? '학생' })}</h1>
         <div className="grid grid-cols-2 gap-3 mt-4">
           <div className="bg-white/10 backdrop-blur-sm p-3 rounded-lg border border-white/10">
-            <p className="text-[10px] opacity-70 uppercase tracking-tight">평균 학점</p>
+            <p className="text-[10px] opacity-70 uppercase tracking-tight">{t('dashboard.gpa')}</p>
             <p className="text-xl font-black font-['Space_Grotesk']">4.2 / 4.5</p>
           </div>
           <div className="bg-white/10 backdrop-blur-sm p-3 rounded-lg border border-white/10">
-            <p className="text-[10px] opacity-70 uppercase tracking-tight">이수 학점</p>
+            <p className="text-[10px] opacity-70 uppercase tracking-tight">{t('dashboard.credits')}</p>
             <p className="text-xl font-black font-['Space_Grotesk']">98 / 130</p>
           </div>
         </div>

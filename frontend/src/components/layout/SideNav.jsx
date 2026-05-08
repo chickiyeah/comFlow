@@ -1,16 +1,18 @@
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 
-const navItems = [
-  { path: '/',           icon: 'dashboard',      label: 'Dashboard'  },
-  { path: '/academic',   icon: 'school',         label: 'Academic'   },
-  { path: '/facilities', icon: 'corporate_fare', label: 'Facilities' },
-  { path: '/career',     icon: 'work',           label: 'Career'     },
-  { path: '/technical',  icon: 'description',    label: 'Technical'  },
+const NAV_ITEMS = [
+  { path: '/',           icon: 'dashboard',      key: 'dashboard'  },
+  { path: '/academic',   icon: 'school',         key: 'academic'   },
+  { path: '/facilities', icon: 'corporate_fare', key: 'facilities' },
+  { path: '/career',     icon: 'work',           key: 'career'     },
+  { path: '/technical',  icon: 'description',    key: 'technical'  },
 ]
 
 export default function SideNav() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
+  const { t } = useTranslation()
 
   return (
     <aside className="fixed left-0 top-0 h-full w-20 flex flex-col items-center py-4 z-50
@@ -19,14 +21,14 @@ export default function SideNav() {
       shadow-[4px_0_24px_rgba(30,58,138,0.08)] dark:shadow-[4px_0_24px_rgba(0,0,0,0.5)]">
 
       {/* Logo */}
-      <div className="flex flex-col items-center mb-8">
+      <button onClick={() => navigate('/')} className="flex flex-col items-center mb-8 hover:opacity-80 transition-opacity active:scale-95">
         <span className="text-secondary-fixed font-black text-2xl font-['Space_Grotesk']">CF</span>
         <span className="text-blue-200/50 dark:text-slate-500 text-[8px] font-bold tracking-wider font-['Space_Grotesk']">v1.0</span>
-      </div>
+      </button>
 
       {/* Nav */}
       <nav className="flex flex-col items-center flex-1 space-y-6 w-full">
-        {navItems.map(({ path, icon, label }) => {
+        {NAV_ITEMS.map(({ path, icon, key }) => {
           const active = path === '/' ? pathname === '/' : pathname.startsWith(path)
           return (
             <button
@@ -42,7 +44,7 @@ export default function SideNav() {
                 {icon}
               </span>
               <span className="font-['Space_Grotesk'] text-[8px] uppercase tracking-wider font-medium mt-1">
-                {label}
+                {t(`nav.${key}`)}
               </span>
             </button>
           )
