@@ -236,6 +236,16 @@ public class AssistantService {
                 req.companyName(), req.jobTitle()
         );
 
+        // 소제목(섹션) 처리
+        boolean hasSections = req.sections() != null && !req.sections().isEmpty();
+        String sectionInstruction = hasSections
+                ? "다음 소제목 순서대로 각 항목을 작성하세요:\n"
+                  + req.sections().stream()
+                        .map(s -> "  [" + s + "]")
+                        .collect(Collectors.joining("\n"))
+                  + "\n각 소제목은 '■ 소제목명' 형식으로 표시하고, 해당 내용을 2~3문단으로 작성하세요."
+                : "소제목 없이 자연스러운 흐름으로 4~5문단, 약 600~800자로 작성하세요.";
+
         String systemPrompt = """
                 당신은 IT 취업 자기소개서 작성 전문가입니다.
                 지원자의 실제 데이터를 바탕으로 지원 회사와 직무에 맞는 자기소개서를 작성하세요.
@@ -244,11 +254,11 @@ public class AssistantService {
                 1. 실제 프로젝트 경험과 기술스택을 구체적으로 언급하세요
                 2. 지원 회사와 직무에 맞게 강점을 부각하세요
                 3. 학점·출석률·수상내역 등 정량적 데이터를 활용하세요
-                4. 자연스러운 한국어로 4~5문단, 약 600~800자로 작성하세요
-                5. "안녕하세요"로 시작하지 말고 지원 동기나 핵심 강점으로 시작하세요
+                4. "안녕하세요"로 시작하지 말고 핵심 강점이나 지원 동기로 시작하세요
+                5. %s
 
                 자기소개서 본문만 출력하세요. JSON이나 마크다운 없이 순수 텍스트로만 응답하세요.
-                """;
+                """.formatted(sectionInstruction);
 
         String coverLetter = aiFacadeService.ask(systemPrompt,
                 "다음 지원자 정보를 바탕으로 자기소개서를 작성해주세요:\n\n" + context);

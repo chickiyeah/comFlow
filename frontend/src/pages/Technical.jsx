@@ -6,6 +6,7 @@ import {
 } from '../api/portfolio'
 import { getResumes, createResume, downloadResumePdf, deleteResume } from '../api/resume'
 import { generateCoverLetter } from '../api/assistant'
+import { getCoverLetters, saveCoverLetter, updateCoverLetter, deleteCoverLetter } from '../api/coverLetter'
 
 const STATUS_LABEL = { IN_PROGRESS: '진행 중', COMPLETED: '완료' }
 const STATUS_COLOR = {
@@ -153,6 +154,7 @@ export default function Technical() {
   const [tab, setTab] = useState('portfolio')
   const [portfolios, setPortfolios] = useState([])
   const [resumes, setResumes] = useState([])
+  const [coverLetters, setCoverLetters] = useState([])
   const [loading, setLoading] = useState(false)
 
   // AI generate state
@@ -170,10 +172,19 @@ export default function Technical() {
   const [showResumeForm, setShowResumeForm] = useState(false)
   const [resumeForm, setResumeForm] = useState({ title: '', summary: '', skills: '', targetJob: '', portfolioIds: [] })
 
-  // 자기소개서 AI 생성 state
+  // 자기소개서 AI 생성 state (이력서 폼 내)
   const [coverLoading, setCoverLoading] = useState(false)
   const [coverCompany, setCoverCompany] = useState('')
   const [coverJobTitle, setCoverJobTitle] = useState('')
+
+  // 자기소개서 탭 state
+  const [showCLModal, setShowCLModal] = useState(false)
+  const [editingCL, setEditingCL] = useState(null)
+  const [clForm, setClForm] = useState({ title: '', companyName: '', jobTitle: '', content: '' })
+  const [clSections, setClSections] = useState([])   // 선택된 소제목 목록
+  const [clCustomSection, setClCustomSection] = useState('')  // 직접 입력
+  const [clAiLoading, setClAiLoading] = useState(false)
+  const [selectedCL, setSelectedCL] = useState(null) // 상세보기
 
   useEffect(() => {
     loadData()
@@ -185,9 +196,12 @@ export default function Technical() {
       if (tab === 'portfolio') {
         const r = await getPortfolios()
         setPortfolios(r.data ?? [])
-      } else {
+      } else if (tab === 'resume') {
         const r = await getResumes()
         setResumes(r.data ?? [])
+      } else {
+        const r = await getCoverLetters()
+        setCoverLetters(r.data ?? [])
       }
     } catch {
       // ignore — show empty state
@@ -280,6 +294,75 @@ export default function Technical() {
     }
   }
 
+  const openNewCL = () => {
+    setEditingCL(null)
+    setClForm({ title: '', companyName: '', jobTitle: '', content: '' })
+    setClSections([])
+    setClCustomSection('')
+    setShowCLModal(true)
+  }
+
+  const openEditCL = (cl) => {
+    setEditingCL(cl)
+    setClForm({ title: cl.title, companyName: cl.companyName, jobTitle: cl.jobTitle, content: cl.content })
+    setClSections([])
+    setClCustomSection('')
+    setSelectedCL(null)
+    setShowCLModal(true)
+  }
+
+  const toggleSection = (s) =>
+    setClSections(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
+
+  const addCustomSection = () => {
+    const v = clCustomSection.trim()
+    if (v && !clSections.includes(v)) setClSections(prev => [...prev, v])
+    setClCustomSection('')
+  }
+
+  const handleSaveCL = async (e) => {
+    e.preventDefault()
+    try {
+      if (editingCL) {
+        await updateCoverLetter(editingCL.id, clForm)
+      } else {
+        await saveCoverLetter(clForm)
+      }
+      setShowCLModal(false)
+      loadData()
+    } catch {
+      alert('저장 중 오류가 발생했습니다.')
+    }
+  }
+
+  const handleDeleteCL = async (id) => {
+    if (!confirm('삭제하시겠습니까?')) return
+    await deleteCoverLetter(id)
+    setCoverLetters(prev => prev.filter(c => c.id !== id))
+    setSelectedCL(null)
+  }
+
+  const handleAiGenerateCL = async () => {
+    if (!clForm.companyName.trim() || !clForm.jobTitle.trim()) {
+      alert('회사명과 직무를 먼저 입력해주세요.')
+      return
+    }
+    setClAiLoading(true)
+    try {
+      const res = await generateCoverLetter({
+        companyName: clForm.companyName.trim(),
+        jobTitle: clForm.jobTitle.trim(),
+        portfolioIds: portfolios.slice(0, 3).map(p => p.id),
+        sections: clSections.length > 0 ? clSections : null,
+      })
+      setClForm(f => ({ ...f, content: res.data.coverLetter }))
+    } catch {
+      alert('자기소개서 생성 중 오류가 발생했습니다.')
+    } finally {
+      setClAiLoading(false)
+    }
+  }
+
   return (
     <Layout title="포트폴리오 · 이력서">
       <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
@@ -301,12 +384,21 @@ export default function Technical() {
               <span className="material-symbols-outlined text-[18px]">add</span>이력서 생성
             </button>
           )}
+          {tab === 'coverletter' && (
+            <button onClick={openNewCL} className="btn-primary text-sm">
+              <span className="material-symbols-outlined text-[18px]">add</span>자기소개서 생성
+            </button>
+          )}
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-1 p-1 bg-surface-container dark:bg-slate-800 rounded-2xl w-fit mb-6">
-        {[{ key: 'portfolio', label: '포트폴리오', icon: 'work_history' }, { key: 'resume', label: '이력서', icon: 'description' }].map(t => (
+        {[
+          { key: 'portfolio',   label: '포트폴리오', icon: 'work_history' },
+          { key: 'resume',      label: '이력서',     icon: 'description'  },
+          { key: 'coverletter', label: '자기소개서', icon: 'edit_note'    },
+        ].map(t => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
@@ -385,6 +477,212 @@ export default function Technical() {
             </button>
           </div>
         )
+      )}
+
+      {/* ── 자기소개서 탭 콘텐츠 ── */}
+      {!loading && tab === 'coverletter' && (
+        coverLetters.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {coverLetters.map(cl => (
+              <div
+                key={cl.id}
+                onClick={() => setSelectedCL(cl)}
+                className="card p-5 group cursor-pointer hover:shadow-md hover:border-primary/30 dark:hover:border-secondary-fixed/30 transition-all active:scale-[0.98] relative"
+              >
+                {/* 회사·직무 뱃지 */}
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  <span className="text-[10px] font-bold px-2.5 py-1 bg-primary/10 dark:bg-primary-container/30 text-primary dark:text-secondary-fixed rounded-full">
+                    {cl.companyName}
+                  </span>
+                  <span className="text-[10px] text-outline dark:text-slate-400">{cl.jobTitle}</span>
+                </div>
+                <h4 className="font-bold text-primary dark:text-white mb-2 group-hover:text-primary dark:group-hover:text-secondary-fixed transition-colors">
+                  {cl.title}
+                </h4>
+                <p className="text-sm text-on-surface-variant dark:text-slate-400 line-clamp-3 leading-relaxed">
+                  {cl.preview}
+                </p>
+                <p className="text-label-md text-outline dark:text-slate-500 mt-3">
+                  {new Date(cl.updatedAt).toLocaleDateString('ko-KR')}
+                </p>
+                <button
+                  onClick={e => { e.stopPropagation(); handleDeleteCL(cl.id) }}
+                  className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg bg-error-container dark:bg-error/20 text-error transition-all"
+                >
+                  <span className="material-symbols-outlined text-[16px]">delete</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="card p-16 text-center">
+            <span className="material-symbols-outlined text-[64px] text-outline dark:text-slate-600 mb-4">edit_note</span>
+            <p className="text-xl font-bold text-primary dark:text-white font-['Space_Grotesk']">자기소개서가 없습니다</p>
+            <p className="text-on-surface-variant dark:text-slate-400 text-sm mt-2 mb-6">지원 회사에 맞는 자기소개서를 AI가 작성해드립니다.</p>
+            <button onClick={openNewCL} className="btn-primary mx-auto">
+              <span className="material-symbols-outlined text-[18px]">add</span>자기소개서 생성
+            </button>
+          </div>
+        )
+      )}
+
+      {/* ── 자기소개서 상세 모달 ── */}
+      {selectedCL && (
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50 flex items-end sm:items-center justify-center p-4"
+          onClick={e => { if (e.target === e.currentTarget) setSelectedCL(null) }}>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-2xl shadow-2xl max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between sticky top-0 bg-white dark:bg-slate-900">
+              <div>
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <span className="text-[11px] font-bold px-2.5 py-1 bg-primary/10 dark:bg-primary-container/30 text-primary dark:text-secondary-fixed rounded-full">{selectedCL.companyName}</span>
+                  <span className="text-label-md text-outline dark:text-slate-400">{selectedCL.jobTitle}</span>
+                </div>
+                <h3 className="font-['Space_Grotesk'] text-lg font-bold text-primary dark:text-white">{selectedCL.title}</h3>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 ml-3">
+                <button onClick={() => openEditCL(selectedCL)} className="p-2 rounded-full hover:bg-surface-container dark:hover:bg-slate-800 transition-colors text-outline dark:text-slate-400" title="수정">
+                  <span className="material-symbols-outlined text-[20px]">edit</span>
+                </button>
+                <button onClick={() => setSelectedCL(null)} className="p-2 rounded-full hover:bg-surface-container dark:hover:bg-slate-800 transition-colors text-outline dark:text-slate-400">
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1">
+              <p className="text-sm text-on-surface dark:text-slate-300 leading-relaxed whitespace-pre-wrap">{selectedCL.content}</p>
+            </div>
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex gap-2">
+              <button onClick={() => {
+                navigator.clipboard.writeText(selectedCL.content)
+                alert('클립보드에 복사됐습니다.')
+              }} className="flex-1 py-2.5 border border-outline-variant dark:border-slate-700 text-on-surface-variant dark:text-slate-300 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
+                <span className="material-symbols-outlined text-[18px]">content_copy</span>복사
+              </button>
+              <button onClick={() => handleDeleteCL(selectedCL.id)}
+                className="py-2.5 px-4 border border-error/30 text-error rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-error-container dark:hover:bg-error/20 transition-colors">
+                <span className="material-symbols-outlined text-[18px]">delete</span>삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 자기소개서 생성/수정 모달 ── */}
+      {showCLModal && (
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50 flex items-end sm:items-center justify-center p-4"
+          onClick={e => { if (e.target === e.currentTarget) setShowCLModal(false) }}>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900">
+              <h3 className="font-['Space_Grotesk'] text-lg font-bold text-primary dark:text-white flex items-center gap-2">
+                <span className="material-symbols-outlined text-secondary dark:text-secondary-fixed">edit_note</span>
+                {editingCL ? '자기소개서 수정' : '자기소개서 생성'}
+              </h3>
+              <button onClick={() => setShowCLModal(false)} className="p-2 rounded-full hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
+                <span className="material-symbols-outlined text-outline dark:text-slate-400">close</span>
+              </button>
+            </div>
+            <form onSubmit={handleSaveCL} className="p-6 space-y-4">
+              {/* 제목 */}
+              <div>
+                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">제목</label>
+                <input value={clForm.title} onChange={e => setClForm(f => ({...f, title: e.target.value}))}
+                  placeholder="예: 카카오 백엔드 지원" required
+                  className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              </div>
+
+              {/* 회사 + 직무 */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">지원 회사</label>
+                  <input value={clForm.companyName} onChange={e => setClForm(f => ({...f, companyName: e.target.value}))}
+                    placeholder="예: 카카오" required
+                    className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                </div>
+                <div>
+                  <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">직무</label>
+                  <input value={clForm.jobTitle} onChange={e => setClForm(f => ({...f, jobTitle: e.target.value}))}
+                    placeholder="예: 백엔드 개발자" required
+                    className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                </div>
+              </div>
+
+              {/* 소제목 선택 */}
+              <div>
+                <p className="text-label-md text-on-surface-variant dark:text-slate-400 mb-2">
+                  소제목 <span className="text-outline dark:text-slate-500">(선택 · AI가 항목별로 작성)</span>
+                </p>
+                {/* 프리셋 */}
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {['지원동기', '성장과정', '직무역량', '입사 후 포부', '팀워크/협업경험', '문제해결 경험'].map(s => (
+                    <button key={s} type="button" onClick={() => toggleSection(s)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                        clSections.includes(s)
+                          ? 'bg-primary dark:bg-primary-container text-white'
+                          : 'bg-surface-container dark:bg-slate-800 text-on-surface-variant dark:text-slate-300 hover:bg-surface-container-high dark:hover:bg-slate-700'
+                      }`}>
+                      {clSections.includes(s) && <span className="mr-1">✓</span>}{s}
+                    </button>
+                  ))}
+                </div>
+                {/* 직접 입력 */}
+                <div className="flex gap-2">
+                  <input value={clCustomSection} onChange={e => setClCustomSection(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustomSection())}
+                    placeholder="직접 입력 후 Enter"
+                    className="flex-1 px-3 py-2 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                  <button type="button" onClick={addCustomSection}
+                    className="px-3 py-2 bg-surface-container dark:bg-slate-700 text-primary dark:text-secondary-fixed rounded-xl text-sm font-bold hover:bg-surface-container-high dark:hover:bg-slate-600 transition-colors">
+                    추가
+                  </button>
+                </div>
+                {/* 선택된 소제목 */}
+                {clSections.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {clSections.map((s, i) => (
+                      <span key={s} className="flex items-center gap-1 px-2.5 py-1 bg-secondary-container/20 dark:bg-secondary-fixed/10 text-on-secondary-container dark:text-secondary-fixed rounded-full text-xs font-bold border border-secondary-fixed/20">
+                        {i + 1}. {s}
+                        <button type="button" onClick={() => setClSections(prev => prev.filter(x => x !== s))}
+                          className="ml-0.5 hover:text-error transition-colors">×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* AI 생성 버튼 */}
+              <button type="button" disabled={clAiLoading || !clForm.companyName || !clForm.jobTitle}
+                onClick={handleAiGenerateCL}
+                className="w-full py-2.5 bg-primary/10 dark:bg-primary-container/20 text-primary dark:text-secondary-fixed border border-primary/20 dark:border-primary-container/40 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-primary/20 dark:hover:bg-primary-container/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                {clAiLoading
+                  ? <><div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />AI 작성 중...</>
+                  : <><span className="material-symbols-outlined text-[18px]">auto_awesome</span>AI로 자기소개서 자동 작성</>
+                }
+              </button>
+
+              {/* 내용 */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-label-md text-on-surface-variant dark:text-slate-400">내용</label>
+                  <span className="text-label-md text-outline dark:text-slate-500">{clForm.content.length}자</span>
+                </div>
+                <textarea value={clForm.content} onChange={e => setClForm(f => ({...f, content: e.target.value}))}
+                  placeholder="AI로 생성하거나 직접 작성해주세요." rows={10} required
+                  className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <button type="button" onClick={() => setShowCLModal(false)}
+                  className="flex-1 py-3 border border-outline-variant dark:border-slate-700 text-on-surface-variant dark:text-slate-300 rounded-xl text-sm font-bold hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
+                  취소
+                </button>
+                <button type="submit"
+                  className="flex-1 py-3 bg-primary dark:bg-primary-container text-white rounded-xl text-sm font-bold hover:scale-[1.02] active:scale-95 transition-transform">
+                  {editingCL ? '수정 완료' : '저장'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* ── AI Generate Modal ── */}
