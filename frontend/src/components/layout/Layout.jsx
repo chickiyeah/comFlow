@@ -6,7 +6,7 @@ import AssistantPanel from '../common/AssistantPanel'
 
 export default function Layout({ title, children }) {
   return (
-    <div className="min-h-screen bg-background dark:bg-[#0b0e14] text-on-background dark:text-on-surface transition-colors duration-300">
+    <div className="min-h-screen bg-background dark:bg-[#12151c] text-on-background dark:text-inverse-on-surface transition-colors duration-300">
       <div className="hidden lg:block">
         <SideNav />
       </div>
