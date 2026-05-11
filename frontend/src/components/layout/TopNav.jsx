@@ -28,11 +28,11 @@ export default function TopNav({ title }) {
   }
 
   return (
-    <header className="fixed top-0 right-0 w-[calc(100%-80px)] h-16 z-40
+    <header className="fixed top-0 left-0 lg:left-20 right-0 h-16 z-40
       bg-white/90 dark:bg-[#0a0c10]/80
       backdrop-blur-md
       border-b border-slate-200/50 dark:border-slate-800
-      shadow-sm flex justify-between items-center px-6">
+      shadow-sm flex justify-between items-center px-4 lg:px-6">
 
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2">

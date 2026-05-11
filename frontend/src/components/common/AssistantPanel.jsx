@@ -49,7 +49,7 @@ export default function AssistantPanel() {
       {/* 트리거 버튼 — SideNav 하단 / 모바일 하단 */}
       <button
         onClick={handleOpen}
-        className="fixed bottom-20 lg:bottom-8 left-24 lg:left-24 w-14 h-14
+        className="fixed bottom-20 lg:bottom-8 left-4 lg:left-24 w-14 h-14
           bg-primary dark:bg-primary-container text-secondary-fixed
           rounded-full shadow-2xl shadow-primary/30 flex items-center justify-center
           hover:scale-110 active:scale-95 transition-transform z-40
