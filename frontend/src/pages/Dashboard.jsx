@@ -1,23 +1,26 @@
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import useAuthStore from '../store/authStore'
 import Layout from '../components/layout/Layout'
+import { getMyGrades } from '../api/grade'
+import { getMyAttendance } from '../api/attendance'
+import { getTodaySchedule } from '../api/schedule'
+import { getRecentNotices } from '../api/notice'
 
 const today = new Date()
 const weekday = ['일', '월', '화', '수', '목', '금', '토'][today.getDay()]
 const dateStr = `${today.getMonth() + 1}월 ${today.getDate()}일 ${weekday}요일`
 
-const SCHEDULE = [
-  { time: '09:00 - 10:30', name: '자료구조 및 알고리즘', code: 'CS201-02', room: '공학관 301호', prof: '이정후 교수', status: '종료',    statusClass: 'bg-surface-container dark:bg-slate-800 text-on-surface-variant dark:text-slate-400' },
-  { time: '11:00 - 12:30', name: '운영체제론',            code: 'CS304-01', room: '정보센터 502호', prof: '박지민 교수', status: '수업 중', statusClass: 'bg-secondary-container dark:bg-secondary-container text-primary dark:text-[#131f00] animate-pulse' },
-  { time: '14:00 - 16:00', name: '인공지능 입문',          code: 'CS412-03', room: '공학관 104호',  prof: '최다니엘 교수', status: '대기',  statusClass: 'bg-surface-container-low dark:bg-slate-900 text-outline dark:text-slate-500' },
-]
-
-const NOTICES = [
-  { title: '2024 하계 인턴십 프로그램 안내', sub: 'D-3 신청 마감', highlight: true },
-  { title: '컴퓨터실습실 점검 안내 (05.24)', sub: '오후 6시 - 9시', highlight: false },
-  { title: '중간고사 성적 확인 기간', sub: '내일 오전 10시부터', highlight: false },
-]
+const calcStatus = (startTime, endTime) => {
+  const now = new Date()
+  const d = now.toISOString().split('T')[0]
+  const start = new Date(`${d}T${startTime}:00`)
+  const end   = new Date(`${d}T${endTime}:00`)
+  if (now < start) return { label: '대기',    cls: 'bg-surface-container-low dark:bg-slate-900 text-outline dark:text-slate-500' }
+  if (now <= end)  return { label: '수업 중', cls: 'bg-secondary-container dark:bg-secondary-container text-primary dark:text-[#131f00] animate-pulse' }
+  return               { label: '종료',    cls: 'bg-surface-container dark:bg-slate-800 text-on-surface-variant dark:text-slate-400' }
+}
 
 const FACILITIES = [
   { title: '도서관 실시간 좌석', sub: '현재 이용 가능: 45석', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuARJawatoRMKKMF71chdEK0mtvswv7_Tbu7Wp5HFaIaLf3hOUrUt7VRVXV8Y7hD4EAvDKZD23sViq03vpi-nA7m-G2hWwx-vcA6naB2vD3YXSLuXc3K4_VbfeWvcbVBFzZTnwwoubYCQ2EAmSIvmfIQowLDyYZf467_Bwhb-39T1_wujPdlp871EzqzUkdBnNCErvv9YrDruUAJiiCPKWXd-bS63l49EuBhjoOTYxeoXoLUTgIqHuQCf92ABCwlpulfIzcT9UADTPE' },
@@ -29,6 +32,38 @@ export default function Dashboard() {
   const user = useAuthStore(s => s.user)
   const navigate = useNavigate()
   const { t } = useTranslation()
+
+  const [gradeSummary, setGradeSummary] = useState(null)
+  const [attendanceSummary, setAttendanceSummary] = useState(null)
+  const [todaySchedule, setTodaySchedule] = useState(null)
+  const [notices, setNotices] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    Promise.all([
+      getMyGrades().catch(() => null),
+      getMyAttendance().catch(() => null),
+      getTodaySchedule().catch(() => null),
+      getRecentNotices(3).catch(() => null),
+    ]).then(([gradeRes, attendanceRes, scheduleRes, noticeRes]) => {
+      if (gradeRes?.data?.data) setGradeSummary(gradeRes.data.data)
+      if (attendanceRes?.data?.data) setAttendanceSummary(attendanceRes.data.data)
+      if (scheduleRes?.data?.data) setTodaySchedule(scheduleRes.data.data)
+      if (noticeRes?.data?.data) setNotices(noticeRes.data.data)
+    }).finally(() => setLoading(false))
+  }, [])
+
+  const gpaDisplay = loading ? '…' : gradeSummary?.gpa != null ? gradeSummary.gpa.toFixed(2) : '—'
+  const creditsDisplay = loading ? '…' : gradeSummary?.totalCredits ?? '—'
+  const absenceWarnings = attendanceSummary?.absenceWarnings ?? []
+
+  const attendanceRate = attendanceSummary
+    ? (() => {
+        const total = attendanceSummary.totalPresent + attendanceSummary.totalLate
+          + attendanceSummary.totalAbsent + attendanceSummary.totalExcused
+        return total > 0 ? Math.round((attendanceSummary.totalPresent / total) * 100) : 100
+      })()
+    : null
 
   return (
     <Layout>
@@ -42,13 +77,19 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 gap-3 mt-4">
           <div className="bg-white/10 backdrop-blur-sm p-3 rounded-lg border border-white/10">
             <p className="text-[10px] opacity-70 uppercase tracking-tight">{t('dashboard.gpa')}</p>
-            <p className="text-xl font-black font-['Space_Grotesk']">4.2 / 4.5</p>
+            <p className="text-xl font-black font-['Space_Grotesk']">{gpaDisplay} / 4.5</p>
           </div>
           <div className="bg-white/10 backdrop-blur-sm p-3 rounded-lg border border-white/10">
             <p className="text-[10px] opacity-70 uppercase tracking-tight">{t('dashboard.credits')}</p>
-            <p className="text-xl font-black font-['Space_Grotesk']">98 / 130</p>
+            <p className="text-xl font-black font-['Space_Grotesk']">{creditsDisplay} 학점</p>
           </div>
         </div>
+        {absenceWarnings.length > 0 && (
+          <div className="mt-3 bg-red-500/20 border border-red-400/30 rounded-lg px-3 py-2 text-xs text-red-200 flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-[14px]">warning</span>
+            결석 경고: {absenceWarnings.join(', ')}
+          </div>
+        )}
       </section>
 
       {/* ── Mobile schedule ── */}
@@ -56,20 +97,28 @@ export default function Dashboard() {
         <h2 className="font-['Space_Grotesk'] font-bold text-primary dark:text-white flex items-center gap-2">
           <span className="material-symbols-outlined text-secondary-fixed text-[20px]">calendar_today</span>오늘의 강의
         </h2>
-        {SCHEDULE.map((c, i) => (
-          <div key={i} className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-100 dark:border-slate-800 flex gap-4 items-center shadow-sm">
-            <div className="flex flex-col items-center justify-center w-16 h-16 bg-surface-container-low dark:bg-slate-800 rounded-lg border-l-4 border-secondary-fixed shrink-0">
-              <span className="text-xs font-bold text-on-surface-variant dark:text-slate-400">{c.time.split(' - ')[0]}</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-primary dark:text-white truncate">{c.name}</p>
-              <p className="text-xs text-on-surface-variant dark:text-slate-400 flex items-center gap-1">
-                <span className="material-symbols-outlined text-[13px]">location_on</span>{c.room}
-              </p>
-            </div>
-            <span className={`px-2 py-1 rounded-full text-[10px] font-bold shrink-0 ${c.statusClass}`}>{c.status}</span>
-          </div>
-        ))}
+        {todaySchedule === null
+          ? <p className="text-sm text-outline dark:text-slate-500 text-center py-4">불러오는 중…</p>
+          : todaySchedule.length === 0
+            ? <p className="text-sm text-outline dark:text-slate-500 text-center py-4">오늘 강의가 없습니다. 시간표를 등록해보세요.</p>
+            : todaySchedule.map((c) => {
+                const { label, cls } = calcStatus(c.startTime, c.endTime)
+                return (
+                  <div key={c.id} className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-100 dark:border-slate-800 flex gap-4 items-center shadow-sm">
+                    <div className="flex flex-col items-center justify-center w-16 h-16 bg-surface-container-low dark:bg-slate-800 rounded-lg border-l-4 border-secondary-fixed shrink-0">
+                      <span className="text-xs font-bold text-on-surface-variant dark:text-slate-400">{c.startTime}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-primary dark:text-white truncate">{c.subjectName}</p>
+                      <p className="text-xs text-on-surface-variant dark:text-slate-400 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[13px]">location_on</span>{c.room || '강의실 미지정'}
+                      </p>
+                    </div>
+                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold shrink-0 ${cls}`}>{label}</span>
+                  </div>
+                )
+              })
+        }
       </section>
 
       {/* ── Mobile quick actions ── */}
@@ -109,11 +158,11 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-surface-container-low dark:bg-slate-800 p-3 rounded-lg border border-slate-50 dark:border-slate-700">
                 <p className="text-label-md text-outline dark:text-slate-500">평균 학점</p>
-                <p className="text-title-lg font-semibold text-primary dark:text-secondary-fixed">4.2 / 4.5</p>
+                <p className="text-title-lg font-semibold text-primary dark:text-secondary-fixed">{gpaDisplay} / 4.5</p>
               </div>
               <div className="bg-surface-container-low dark:bg-slate-800 p-3 rounded-lg border border-slate-50 dark:border-slate-700">
                 <p className="text-label-md text-outline dark:text-slate-500">이수 학점</p>
-                <p className="text-title-lg font-semibold text-primary dark:text-secondary-fixed">98 / 130</p>
+                <p className="text-title-lg font-semibold text-primary dark:text-secondary-fixed">{creditsDisplay} 학점</p>
               </div>
             </div>
             <button onClick={() => navigate('/academic')} className="w-full py-3 bg-primary dark:bg-primary-container text-white rounded-lg text-label-md hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
@@ -130,19 +179,23 @@ export default function Dashboard() {
               <h3 className="font-['Space_Grotesk'] text-lg font-medium flex items-center gap-2">
                 <span className="material-symbols-outlined text-secondary-fixed">info</span>중요 공지사항
               </h3>
-              <span className="bg-secondary-fixed text-primary text-[10px] px-2 py-1 rounded font-bold">New</span>
+              {notices?.some(n => n.important) && (
+                <span className="bg-secondary-fixed text-primary text-[10px] px-2 py-1 rounded font-bold">New</span>
+              )}
             </div>
             <ul className="flex flex-col gap-3 relative z-10">
-              {NOTICES.map((n, i) => (
-                <li key={i} className={`pb-2 ${i < NOTICES.length - 1 ? 'border-b border-white/10 dark:border-slate-800' : ''}`}>
-                  <p className={`text-sm font-medium ${n.highlight ? 'text-secondary-fixed' : 'text-slate-100 dark:text-slate-200'}`}>{n.title}</p>
-                  <p className="text-[11px] text-slate-300 dark:text-slate-400">{n.sub}</p>
-                </li>
-              ))}
+              {notices === null
+                ? <li className="text-sm text-slate-300 text-center py-2">불러오는 중…</li>
+                : notices.length === 0
+                  ? <li className="text-sm text-slate-300 text-center py-2">등록된 공지사항이 없습니다.</li>
+                  : notices.map((n, i) => (
+                    <li key={n.id} className={`pb-2 ${i < notices.length - 1 ? 'border-b border-white/10 dark:border-slate-800' : ''}`}>
+                      <p className={`text-sm font-medium ${n.important ? 'text-secondary-fixed' : 'text-slate-100 dark:text-slate-200'}`}>{n.title}</p>
+                      {n.summary && <p className="text-[11px] text-slate-300 dark:text-slate-400">{n.summary}</p>}
+                    </li>
+                  ))
+              }
             </ul>
-            <button className="text-secondary-fixed text-label-md font-medium flex items-center gap-1 hover:underline">
-              전체 공지 보기 <span className="material-symbols-outlined text-xs">open_in_new</span>
-            </button>
           </div>
         </section>
 
@@ -168,43 +221,67 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                  {SCHEDULE.map((c, i) => (
-                    <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                      <td className="py-5 text-sm text-primary dark:text-slate-300">{c.time}</td>
-                      <td className="py-5">
-                        <p className="font-bold text-primary dark:text-slate-100">{c.name}</p>
-                        <p className="text-label-md text-outline dark:text-slate-500">{c.code}</p>
-                      </td>
-                      <td className="py-5 text-sm text-outline dark:text-slate-400">{c.room}</td>
-                      <td className="py-5 text-sm text-outline dark:text-slate-400">{c.prof}</td>
-                      <td className="py-5 text-right">
-                        <span className={`px-3 py-1 rounded-full text-[11px] font-bold ${c.statusClass}`}>{c.status}</span>
-                      </td>
-                    </tr>
-                  ))}
+                  {todaySchedule === null
+                    ? <tr><td colSpan={5} className="py-8 text-center text-outline dark:text-slate-500 text-sm">불러오는 중…</td></tr>
+                    : todaySchedule.length === 0
+                      ? <tr><td colSpan={5} className="py-8 text-center text-outline dark:text-slate-500 text-sm">오늘 강의가 없습니다. 시간표를 등록해보세요.</td></tr>
+                      : todaySchedule.map((c) => {
+                          const { label, cls } = calcStatus(c.startTime, c.endTime)
+                          return (
+                            <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                              <td className="py-5 text-sm text-primary dark:text-slate-300">{c.startTime} - {c.endTime}</td>
+                              <td className="py-5">
+                                <p className="font-bold text-primary dark:text-slate-100">{c.subjectName}</p>
+                                {c.subjectCode && <p className="text-label-md text-outline dark:text-slate-500">{c.subjectCode}</p>}
+                              </td>
+                              <td className="py-5 text-sm text-outline dark:text-slate-400">{c.room || '—'}</td>
+                              <td className="py-5 text-sm text-outline dark:text-slate-400">{c.professor || '—'}</td>
+                              <td className="py-5 text-right">
+                                <span className={`px-3 py-1 rounded-full text-[11px] font-bold ${cls}`}>{label}</span>
+                              </td>
+                            </tr>
+                          )
+                        })
+                  }
                 </tbody>
               </table>
             </div>
             <div className="mt-6 grid grid-cols-2 gap-4">
               <div className="bg-surface-container-low dark:bg-slate-800 rounded-xl p-4 flex items-center gap-4 border-l-4 border-secondary-fixed">
                 <div className="p-3 bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700">
-                  <span className="material-symbols-outlined text-primary dark:text-secondary-fixed">task</span>
+                  <span className="material-symbols-outlined text-primary dark:text-secondary-fixed">how_to_reg</span>
                 </div>
                 <div>
-                  <p className="text-label-md text-outline dark:text-slate-500">오늘의 과제</p>
-                  <p className="font-bold text-primary dark:text-white">OS 동기화 보고서 제출</p>
+                  <p className="text-label-md text-outline dark:text-slate-500">출석률</p>
+                  <p className="font-bold text-primary dark:text-white">
+                    {attendanceRate != null ? `${attendanceRate}%` : '—'}
+                    {attendanceSummary && (
+                      <span className="text-label-md text-outline dark:text-slate-400 ml-2">
+                        결석 {attendanceSummary.totalAbsent}회
+                      </span>
+                    )}
+                  </p>
                 </div>
               </div>
               <div className="bg-surface-container-low dark:bg-slate-800 rounded-xl p-4 flex items-center gap-4 border-l-4 border-primary dark:border-primary-container">
                 <div className="p-3 bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700">
-                  <span className="material-symbols-outlined text-primary dark:text-secondary-fixed">restaurant</span>
+                  <span className="material-symbols-outlined text-primary dark:text-secondary-fixed">workspace_premium</span>
                 </div>
                 <div>
-                  <p className="text-label-md text-outline dark:text-slate-500">오늘의 학식</p>
-                  <p className="font-bold text-primary dark:text-white">돈까스 &amp; 크림스프</p>
+                  <p className="text-label-md text-outline dark:text-slate-500">취득 학점</p>
+                  <p className="font-bold text-primary dark:text-white">{creditsDisplay} 학점</p>
                 </div>
               </div>
             </div>
+            {absenceWarnings.length > 0 && (
+              <div className="mt-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-start gap-3">
+                <span className="material-symbols-outlined text-red-500 dark:text-red-400 text-[20px] mt-0.5">warning</span>
+                <div>
+                  <p className="text-sm font-bold text-red-700 dark:text-red-400">결석 경고 과목</p>
+                  <p className="text-sm text-red-600 dark:text-red-300 mt-0.5">{absenceWarnings.join(' · ')}</p>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 

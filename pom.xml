@@ -126,6 +126,13 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Jsoup (HTML 파싱 - 고용24 스크래핑) -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.17.2</version>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

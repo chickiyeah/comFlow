@@ -5,7 +5,7 @@ import { generateRoadmap } from '../api/roadmap'
 import {
   getActivities, createActivity, updateActivity, deleteActivity,
   getSavedJobs, saveJob, deleteSavedJob,
-  searchJobs, searchCerts,
+  searchJobs, getCertSchedules,
 } from '../api/career'
 
 const CERT_TYPE_STYLE = {
@@ -66,6 +66,8 @@ export default function Career() {
   const [jobKeyword, setJobKeyword] = useState('IT')
   const [jobResults, setJobResults] = useState([])
   const [jobSearchLoading, setJobSearchLoading] = useState(false)
+  const [jobFilters, setJobFilters] = useState({ source: 'all', region: '', career: '', empType: '' })
+  const [jobTotal, setJobTotal] = useState(null)
 
   // Cert search state
   const [certKeyword, setCertKeyword] = useState('')
@@ -149,14 +151,25 @@ export default function Career() {
 
   // Job search
   const handleJobSearch = async (e) => {
-    e.preventDefault()
+    e?.preventDefault()
     setJobSearchLoading(true)
+    setJobResults([])
     try {
-      const res = await searchJobs(jobKeyword)
-      setJobResults(res.data.data ?? [])
+      const params = {}
+      if (jobFilters.source !== 'all') params.source = jobFilters.source
+      if (jobFilters.region) params.region = jobFilters.region
+      if (jobFilters.career) params.career = jobFilters.career
+      if (jobFilters.empType) params.empType = jobFilters.empType
+      const res = await searchJobs(jobKeyword, 0, params)
+      const data = res.data.data ?? []
+      setJobResults(data)
+      setJobTotal(data.length)
     } catch { setJobResults([]) }
     finally { setJobSearchLoading(false) }
   }
+
+  const setFilter = (key, val) =>
+    setJobFilters(f => ({ ...f, [key]: f[key] === val ? '' : val }))
   const handleSaveJob = async (job) => {
     await saveJob({
       title: job.title, company: job.company, location: job.location,
@@ -176,7 +189,7 @@ export default function Career() {
     e.preventDefault()
     setCertSearchLoading(true)
     try {
-      const res = await searchCerts(certKeyword || undefined, new Date().getFullYear())
+      const res = await getCertSchedules(certKeyword || undefined, new Date().getFullYear())
       setCertResults(res.data.data ?? [])
     } catch { setCertResults([]) }
     finally { setCertSearchLoading(false) }
@@ -488,34 +501,127 @@ export default function Career() {
       {/* ── Jobs Tab ── */}
       {tab === 'jobs' && (
         <>
-          {/* Search */}
-          <div className="card p-5 mb-5">
+          {/* Search + 필터 */}
+          <div className="card p-5 mb-4 space-y-4">
             <form onSubmit={handleJobSearch} className="flex gap-3">
               <input value={jobKeyword} onChange={e => setJobKeyword(e.target.value)}
-                placeholder="키워드 (예: 백엔드, 프론트엔드, Java)"
+                placeholder="키워드 (예: 백엔드, Java, 프론트엔드)"
                 className="flex-1 px-4 py-2.5 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-white rounded-xl text-sm focus:outline-none" />
               <button type="submit" disabled={jobSearchLoading}
-                className="px-5 py-2.5 bg-primary dark:bg-primary-container text-white rounded-xl font-semibold text-sm shadow hover:scale-[1.02] active:scale-95 transition-transform disabled:opacity-50">
+                className="px-5 py-2.5 bg-primary dark:bg-primary-container text-white rounded-xl font-semibold text-sm shadow hover:scale-[1.02] active:scale-95 transition-transform disabled:opacity-50 shrink-0">
                 {jobSearchLoading ? '검색중...' : '검색'}
               </button>
             </form>
-            <p className="text-xs text-on-surface-variant dark:text-slate-500 mt-2">워크넷 API 키 등록 시 실시간 채용공고를 검색합니다. 키 미등록 시 직접 추가만 가능합니다.</p>
+
+            {/* 지역 */}
+            <div>
+              <p className="text-xs text-on-surface-variant dark:text-slate-500 mb-2 font-medium">지역</p>
+              <div className="flex flex-wrap gap-1.5">
+                {['서울','경기','인천','부산','대구','대전','광주','울산','세종','강원','충북','충남','전북','전남','경북','경남','제주'].map(r => (
+                  <button key={r} type="button" onClick={() => setFilter('region', r)}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                      jobFilters.region === r
+                        ? 'bg-primary dark:bg-primary-container text-white shadow'
+                        : 'bg-surface-container dark:bg-slate-800 text-on-surface-variant dark:text-slate-400 hover:bg-surface-container-high dark:hover:bg-slate-700'
+                    }`}>{r}</button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-6">
+              {/* 경력 */}
+              <div>
+                <p className="text-xs text-on-surface-variant dark:text-slate-500 mb-2 font-medium">경력</p>
+                <div className="flex gap-1.5">
+                  {['신입','경력','경력무관'].map(c => (
+                    <button key={c} type="button" onClick={() => setFilter('career', c === '경력무관' ? '' : c)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                        (c === '경력무관' ? jobFilters.career === '' : jobFilters.career === c)
+                          ? 'bg-secondary-fixed text-on-secondary-fixed shadow-lime'
+                          : 'bg-surface-container dark:bg-slate-800 text-on-surface-variant dark:text-slate-400 hover:bg-surface-container-high dark:hover:bg-slate-700'
+                      }`}>{c}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 고용형태 */}
+              <div>
+                <p className="text-xs text-on-surface-variant dark:text-slate-500 mb-2 font-medium">고용형태</p>
+                <div className="flex gap-1.5">
+                  {['전체','정규직','계약직'].map(e => (
+                    <button key={e} type="button" onClick={() => setFilter('empType', e === '전체' ? '' : e)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                        (e === '전체' ? jobFilters.empType === '' : jobFilters.empType === e)
+                          ? 'bg-secondary-fixed text-on-secondary-fixed shadow-lime'
+                          : 'bg-surface-container dark:bg-slate-800 text-on-surface-variant dark:text-slate-400 hover:bg-surface-container-high dark:hover:bg-slate-700'
+                      }`}>{e}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 출처 */}
+              <div>
+                <p className="text-xs text-on-surface-variant dark:text-slate-500 mb-2 font-medium">출처</p>
+                <div className="flex gap-1.5">
+                  {[['all','전체'],['jobkorea','잡코리아'],['work24','고용24']].map(([val, label]) => (
+                    <button key={val} type="button"
+                      onClick={() => setJobFilters(f => ({ ...f, source: val }))}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                        jobFilters.source === val
+                          ? 'bg-tertiary-container text-on-tertiary-container shadow'
+                          : 'bg-surface-container dark:bg-slate-800 text-on-surface-variant dark:text-slate-400 hover:bg-surface-container-high dark:hover:bg-slate-700'
+                      }`}>{label}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* 활성 필터 요약 */}
+            {(jobFilters.region || jobFilters.career || jobFilters.empType) && (
+              <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-outline-variant/30 dark:border-slate-700">
+                <span className="text-xs text-outline dark:text-slate-500">적용된 필터:</span>
+                {jobFilters.region && <span className="chip-active text-xs">{jobFilters.region}</span>}
+                {jobFilters.career && <span className="chip-active text-xs">{jobFilters.career}</span>}
+                {jobFilters.empType && <span className="chip-active text-xs">{jobFilters.empType}</span>}
+                <button onClick={() => setJobFilters(f => ({ ...f, region: '', career: '', empType: '' }))}
+                  className="text-xs text-error hover:underline ml-1">초기화</button>
+              </div>
+            )}
           </div>
 
           {/* Search results */}
-          {jobResults.length > 0 && (
+          {jobSearchLoading && (
+            <div className="space-y-3 mb-6">
+              {[1,2,3].map(i => <div key={i} className="card p-4 h-16 animate-pulse" />)}
+            </div>
+          )}
+          {!jobSearchLoading && jobResults.length > 0 && (
             <div className="mb-6">
-              <h3 className="font-semibold text-primary dark:text-white mb-3 text-sm">검색 결과 ({jobResults.length}건)</h3>
+              <h3 className="font-semibold text-primary dark:text-white mb-3 text-sm">
+                검색 결과 {jobTotal !== null && <span className="text-outline dark:text-slate-400 font-normal">({jobResults.length}건)</span>}
+              </h3>
               <div className="space-y-3">
                 {jobResults.map((job, i) => (
                   <div key={i} className="card p-4 flex items-start gap-4">
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-on-surface dark:text-white text-sm mb-0.5">{job.title}</p>
-                      <div className="flex flex-wrap gap-x-3 text-xs text-on-surface-variant dark:text-slate-400">
-                        <span>{job.company}</span>
+                      <div className="flex items-start gap-2 mb-0.5">
+                        <p className="font-semibold text-on-surface dark:text-white text-sm leading-snug">{job.title}</p>
+                        {job.source && (
+                          <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-surface-container dark:bg-slate-700 text-outline dark:text-slate-400 mt-0.5">
+                            {job.source}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-on-surface-variant dark:text-slate-400">
+                        <span className="font-medium">{job.company}</span>
                         {job.location && <span>{job.location}</span>}
-                        {job.deadline && <span>마감: {job.deadline}</span>}
-                        {job.jobType && <span>{job.jobType}</span>}
+                        {job.jobType && (
+                          <span className="px-1.5 py-0.5 rounded-full bg-surface-container dark:bg-slate-800">
+                            {job.jobType}
+                          </span>
+                        )}
+                        {job.salary && <span>{job.salary}</span>}
+                        {job.deadline && <span className="text-error">마감 {job.deadline}</span>}
                       </div>
                     </div>
                     <div className="flex gap-1 shrink-0">
@@ -533,6 +639,12 @@ export default function Career() {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+          {!jobSearchLoading && jobResults.length === 0 && jobTotal !== null && (
+            <div className="card p-10 text-center mb-6">
+              <span className="material-symbols-outlined text-[48px] text-outline dark:text-slate-600 mb-2">search_off</span>
+              <p className="text-sm text-on-surface-variant dark:text-slate-400">검색 결과가 없습니다. 필터를 조정해보세요.</p>
             </div>
           )}
 

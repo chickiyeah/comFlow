@@ -8,7 +8,12 @@
     {
       "name": "qnet.api.key",
       "type": "java.lang.String",
-      "description": "큐넷 국가자격 시험일정 API 인증키 (data.go.kr)"
+      "description": "큐넷 국가자격 API 인증키 (data.go.kr - 시험일정/종목목록/자격정보/공개문제/시험장소 공용)"
+    },
+    {
+      "name": "blind.recruit.api.key",
+      "type": "java.lang.String",
+      "description": "한국산업인력공단 블라인드 채용 기업 API 인증키 (data.go.kr 15041620)"
     },
     {
       "name": "mail.from",

@@ -23,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -90,6 +91,11 @@ public class AssistantService {
         // 4. 포트폴리오 수
         int portfolioCount = portfolioRepository.findByStudentIdOrderByStartDateDesc(sid).size();
 
+        // 4-1. 졸업요건별 이수학점 집계
+        Map<String, Integer> earnedByName = grades.stream()
+                .collect(Collectors.groupingBy(g -> g.getSubjectName(),
+                        Collectors.summingInt(g -> g.getCredits())));
+
         // 현재 학기 계산 (학년·학기 기반)
         int currentSemester = (student.getGrade() - 1) * 2 + student.getSemester();
         int remainingSemesters = Math.max(0, 4 - currentSemester);
@@ -123,14 +129,15 @@ public class AssistantService {
         String raw = aiFacadeService.ask(SYSTEM_PROMPT,
                 "다음 학생 데이터를 분석하여 맞춤 추천을 JSON으로 제공하세요:\n\n" + context);
 
-        return parseResponse(raw, student, gpa, currentSemester, remainingSemesters, absenceWarnings, requirements);
+        return parseResponse(raw, student, gpa, currentSemester, remainingSemesters, absenceWarnings, requirements, earnedByName);
     }
 
     @SuppressWarnings("unchecked")
     private AssistantResponse parseResponse(String raw, Student student, Double gpa,
                                              int currentSemester, int remainingSemesters,
                                              List<String> absenceWarnings,
-                                             List<?> requirements) {
+                                             List<?> requirements,
+                                             Map<String, Integer> earnedByName) {
         try {
             String json = raw.trim().replaceAll("(?s)```json?\\s*", "").replaceAll("```\\s*$", "").trim();
             Map<String, Object> map = objectMapper.readValue(json, new TypeReference<>() {});
@@ -155,8 +162,10 @@ public class AssistantService {
                     })
                     .map(r -> {
                         var req = (com.campusflow.domain.graduation.entity.GraduationRequirement) r;
+                        int earned = earnedByName.getOrDefault(req.getName(), 0);
+                        int shortage = Math.max(0, req.getRequiredCredits() - earned);
                         return new AssistantResponse.GradWarning(
-                                req.getCategory(), 0, req.getRequiredCredits(), req.getRequiredCredits());
+                                req.getCategory(), earned, req.getRequiredCredits(), shortage);
                     })
                     .toList();
 

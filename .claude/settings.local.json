@@ -7,7 +7,14 @@
       "WebSearch",
       "Bash(mvn compile *)",
       "Bash(npm run *)",
-      "Bash(npx --version)"
+      "Bash(npx --version)",
+      "WebFetch(domain:www.work24.go.kr)",
+      "WebFetch(domain:m.work24.go.kr)",
+      "mcp__claude_ai_Notion__notion-fetch",
+      "mcp__claude_ai_Notion__notion-update-page",
+      "Bash(\"C:/apache-maven-3.9.15-bin/apache-maven-3.9.15/bin/mvn.cmd\" compile *)",
+      "Bash(\"/c/Program Files/PuTTY/pscp\" -pw \"cjm@0124\" -q /tmp/campusflow_full.tar.gz rndp@10.8.0.2:/tmp/campusflow_full.tar.gz)",
+      "Bash('/c/Program Files/PuTTY/plink' -ssh -batch -pw cjm@0124 rndp@10.8.0.2 ' *)"
     ]
   }
 }
