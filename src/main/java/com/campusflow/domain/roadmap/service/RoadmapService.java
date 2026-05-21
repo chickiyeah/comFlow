@@ -9,6 +9,7 @@ import com.campusflow.global.exception.ErrorCode;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -49,6 +50,7 @@ public class RoadmapService {
             직업: %s
             """;
 
+    @Cacheable(value = "roadmaps", key = "#request.jobTitle() + '_' + #request.useExternalAi()")
     public RoadmapResponse generateRoadmap(RoadmapRequest request) {
         String userMessage = String.format(ROADMAP_JSON_TEMPLATE, request.jobTitle());
         String systemPrompt;

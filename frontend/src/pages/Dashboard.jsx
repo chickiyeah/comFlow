@@ -7,6 +7,8 @@ import { getMyGrades } from '../api/grade'
 import { getMyAttendance } from '../api/attendance'
 import { getTodaySchedule } from '../api/schedule'
 import { getRecentNotices } from '../api/notice'
+import { getTodayMeal } from '../api/meal'
+import { getMyWarnings } from '../api/planner'
 
 const today = new Date()
 const weekday = ['일', '월', '화', '수', '목', '금', '토'][today.getDay()]
@@ -37,6 +39,8 @@ export default function Dashboard() {
   const [attendanceSummary, setAttendanceSummary] = useState(null)
   const [todaySchedule, setTodaySchedule] = useState(null)
   const [notices, setNotices] = useState(null)
+  const [meal, setMeal]       = useState(null)
+  const [warning, setWarning] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -45,11 +49,15 @@ export default function Dashboard() {
       getMyAttendance().catch(() => null),
       getTodaySchedule().catch(() => null),
       getRecentNotices(3).catch(() => null),
-    ]).then(([gradeRes, attendanceRes, scheduleRes, noticeRes]) => {
-      if (gradeRes?.data?.data) setGradeSummary(gradeRes.data.data)
+      getTodayMeal().catch(() => null),
+      getMyWarnings().catch(() => null),
+    ]).then(([gradeRes, attendanceRes, scheduleRes, noticeRes, mealRes, warningRes]) => {
+      if (gradeRes?.data?.data)     setGradeSummary(gradeRes.data.data)
       if (attendanceRes?.data?.data) setAttendanceSummary(attendanceRes.data.data)
-      if (scheduleRes?.data?.data) setTodaySchedule(scheduleRes.data.data)
-      if (noticeRes?.data?.data) setNotices(noticeRes.data.data)
+      if (scheduleRes?.data?.data)  setTodaySchedule(scheduleRes.data.data)
+      if (noticeRes?.data?.data)    setNotices(noticeRes.data.data)
+      if (mealRes?.data?.data)      setMeal(mealRes.data.data)
+      if (warningRes?.data?.data)   setWarning(warningRes.data.data)
     }).finally(() => setLoading(false))
   }, [])
 
@@ -67,6 +75,24 @@ export default function Dashboard() {
 
   return (
     <Layout>
+      {/* ── 조기경보 배너 (위험 시만 표시) ── */}
+      {warning && warning.level !== 'SAFE' && (
+        <div className={`mb-4 px-4 py-3 rounded-xl flex items-start gap-3 border
+          ${warning.level === 'DANGER'
+            ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+            : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'}`}>
+          <span className={`material-symbols-outlined text-[22px] mt-0.5 ${warning.level === 'DANGER' ? 'text-red-500' : 'text-yellow-500'}`}>warning</span>
+          <div className="flex-1">
+            <p className={`text-sm font-bold ${warning.level === 'DANGER' ? 'text-red-700 dark:text-red-400' : 'text-yellow-700 dark:text-yellow-400'}`}>
+              {warning.level === 'DANGER' ? '🚨 학업 위험 경고' : '⚠️ 학업 주의'}
+            </p>
+            <p className={`text-xs mt-0.5 ${warning.level === 'DANGER' ? 'text-red-600 dark:text-red-300' : 'text-yellow-600 dark:text-yellow-300'}`}>
+              {warning.warnings?.join(' · ')}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ── Mobile hero card ── */}
       <section className="lg:hidden bg-primary dark:bg-primary-container rounded-xl p-6 text-white mb-6 relative overflow-hidden shadow-xl">
         <div className="absolute top-0 right-0 opacity-10">

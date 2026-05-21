@@ -1,0 +1,33 @@
+﻿[1] Navigate to course submain: ky=A20261118031052182850c01
+  Status: 200, URL: https://lms.jvision.ac.kr/ilos/main/main_form.acl, Size: 84561
+  ky values in submain: set()
+
+[2] Attendance with ky=KLASS_ID
+  Form GET: 200, size=143
+https://lms.jvision.ac.kr/ilos/st/course/attendance_list_form.acl?ky=A20261118031052182850c01
+  Attendance POST: 200, size=143, type=text/html;charset=utf-8
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+
+
+
+alert("�ش� ���� ���� ������ �����ϴ�.");
+
+
+
+window.top.location.href = "/ilos/index.jsp";
+
+</script>

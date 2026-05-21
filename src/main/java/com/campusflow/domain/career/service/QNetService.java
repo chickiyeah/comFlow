@@ -3,6 +3,7 @@ package com.campusflow.domain.career.service;
 import com.campusflow.domain.career.dto.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -28,6 +29,7 @@ public class QNetService {
     private static final String INFO_URL = "http://openapi.q-net.or.kr/api/service/rest/InquiryQualInfo/getList";
     private static final String AREA_URL = "http://openapi.q-net.or.kr/api/service/rest/InquiryExamAreaSVC/getList";
 
+    @Cacheable(value = "certSchedules", key = "(#keyword ?: 'all') + '_' + #year")
     public List<CertExamSchedule> getSchedules(String keyword, int year) {
         if (notReady()) return List.of();
         try {
@@ -44,6 +46,7 @@ public class QNetService {
         }
     }
 
+    @Cacheable(value = "qualList", key = "#keyword ?: 'all'")
     public List<QualificationItem> searchQualifications(String keyword) {
         if (notReady()) return List.of();
         try {
@@ -60,6 +63,7 @@ public class QNetService {
         }
     }
 
+    @Cacheable(value = "qualDetail", key = "(#jmCd ?: 'x') + '_' + (#qualgbCd ?: 'x')")
     public List<QualificationDetail> getQualificationDetail(String jmCd, String qualgbCd) {
         if (notReady()) return List.of();
         try {
@@ -77,6 +81,7 @@ public class QNetService {
         }
     }
 
+    @Cacheable(value = "examLocations", key = "#brchCd ?: 'all'")
     public List<ExamLocation> getExamLocations(String brchCd) {
         if (notReady()) return List.of();
         try {

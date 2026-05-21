@@ -1,0 +1,112 @@
+﻿
+
+=== Attendance HTML for A20261118031052182850c01 (1706 bytes) ===
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div style="margin: 0 0 10px 0;width: 100%;">
+
+  
+
+  <div style="float:right; overflow: hidden; ">
+
+    <div style="float:left;margin-right: 10px;"><div style="width: 10px; height: 10px; background-color:  #96d452; bord
+er: 1px solid #63ad12; float:left; margin-right: 4px; position: relative;top: 1px;"></div>
+
+      <span style="font-weight: bold;">�⼮(<span id="div_1">0</span>)</span>
+
+    </div>
+
+    
+
+    <div style="float:left;margin-right: 10px;"><div style="width: 10px; height: 10px;  background-color: #fd9500; bord
+er: 1px solid #e8ab06; float:left; margin-right: 4px; position: relative;top: 1px;"></div>
+
+      <span style="font-weight: bold;">����(<span id="div_3">0</span>)</span>
+
+    </div>
+
+    
+
+    <div style="float:left;margin-right: 10px;"><div style="width: 10px; height: 10px;background-color: #f44336; border
+: 1px solid  #d32f2f; float:left; margin-right: 4px; position: relative;top: 1px;"></div> 
+
+      <span style="font-weight: bold;">�Ἦ(<span id="div_2">0</span>)</span>
+
+    </div>
+
+    
+
+    <div style="float:left;margin-right: 5px;"><div style="width: 10px; height: 10px; border: 1px solid #999; float:lef
+t; margin-right: 4px; position: relative;top: 1px;"></div> 
+
+      <span style="font-weight: bold;">��üũ(<span id="div_4">0</span>)</span>
+
+    </div>
+
+  </div> 
+
+</div> 
+
+ 
+
+   <div style="width: 100%; overflow: hidden;"></div>
+
+  
+
+  
+
+  <div style="padding: 10px;text-align: center;"> ��ȸ�� �ڷᰡ �����ϴ�</div>
+
+ 
+
+ <script type="text/javascript">
+
+ $(function() {
+
+   $("#div_1").html("0");
+
+   $("#div_2").html("0");
+
+   
+
+   $("#div_3").html("0");
+
+   
+
+   
+
+   $("#div_4").html("0");
+
+ });
+
+ 
+
+ </script>
+
+

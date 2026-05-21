@@ -1,0 +1,51 @@
+import requests, re, json
+LMS = "https://lms.jvision.ac.kr"
+uid = "201918023"
+upw = "D@lstn!0722"
+KLASS = "A20261118031052182850c01"
+
+import urllib3
+urllib3.disable_warnings()
+
+sess = requests.Session()
+sess.headers.update({"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"})
+sess.cookies.set("_language_", "ko", domain="lms.jvision.ac.kr", path="/")
+sess.cookies.set("co_check", "1", domain="lms.jvision.ac.kr", path="/")
+
+sess.get(f"{LMS}/ilos/main/member/login_form.acl", verify=False, timeout=10)
+r_login = sess.post(f"{LMS}/ilos/lo/login.acl",
+    data={"returnURL":"","challenge":"","response":"","usr_id":uid,"usr_pwd":upw},
+    headers={"Content-Type":"application/x-www-form-urlencoded","Referer":f"{LMS}/ilos/main/member/login_form.acl","Origin":LMS},
+    verify=False, timeout=15, allow_redirects=False)
+js_match = re.search(r"document\.location\.href=['\"]([^'\"]+)['\"]", r_login.text)
+if js_match:
+    m = js_match.group(1)
+    sess.get((LMS + m) if not m.startswith('http') else m, verify=False, timeout=15)
+
+sess.get(f"{LMS}/ilos/mp/course_register_list_form.acl", verify=False, timeout=10)
+r_c = sess.post(f"{LMS}/ilos/mp/course_register_list.acl",
+    data={"YEAR":"2026","TERM":"1","num":"1","encoding":"utf-8"},
+    headers={"Content-Type":"application/x-www-form-urlencoded; charset=UTF-8","X-Requested-With":"XMLHttpRequest",
+             "Referer":f"{LMS}/ilos/mp/course_register_list_form.acl","Origin":LMS},
+    verify=False, timeout=10)
+klass_ids = list(set(re.findall(r"eclassRoom\('([^']+)'\)", r_c.text)))
+
+for kjkey in klass_ids:
+    sess.post(f"{LMS}/ilos/st/course/eclass_room2.acl",
+        data={"KJKEY":kjkey,"FLAG":"mp","returnURI":"/ilos/st/course/submain_form.acl","encoding":"utf-8"},
+        headers={"Content-Type":"application/x-www-form-urlencoded; charset=UTF-8","X-Requested-With":"XMLHttpRequest",
+                 "Referer":f"{LMS}/ilos/mp/course_register_list_form.acl","Origin":LMS},
+        verify=False, timeout=10)
+    sess.get(f"{LMS}/ilos/st/course/submain_form.acl",
+        headers={"Referer":f"{LMS}/ilos/mp/course_register_list_form.acl"}, verify=False, timeout=10)
+    sess.get(f"{LMS}/ilos/st/course/attendance_list_form.acl",
+        headers={"Referer":f"{LMS}/ilos/st/course/submain_form.acl"}, verify=False, timeout=10)
+    ra = sess.post(f"{LMS}/ilos/st/course/attendance_list.acl",
+        data={"ud":uid,"ky":kjkey,"encoding":"utf-8"},
+        headers={"Content-Type":"application/x-www-form-urlencoded; charset=UTF-8",
+                 "X-Requested-With":"XMLHttpRequest",
+                 "Referer":f"{LMS}/ilos/st/course/attendance_list_form.acl","Origin":LMS},
+        verify=False, timeout=15)
+
+    print(f"\n=== Attendance HTML for {kjkey} ({len(ra.content)} bytes) ===")
+    print(ra.text)

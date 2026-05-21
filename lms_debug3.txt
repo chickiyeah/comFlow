@@ -1,0 +1,30 @@
+﻿eclassRoom IDs found: ['A20261118031052182850c01']
+Course links: []
+
+[Test attendance with ky=N2026B182940c00]
+Attendance: 143 bytes, type=text/html;charset=utf-8
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+
+
+
+alert("�ش� ���� ���� ������ �����ϴ�.");
+
+
+
+window.top.location.href = "/ilos/index.jsp";
+
+</script>

@@ -1,0 +1,237 @@
+﻿Course list: 7688 bytes
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script type="text/javascript">
+<!--
+
+if(YearInfo.length == num1 ) {
+
+  $("#onceLecture").hide(); 
+
+}
+//-->
+</script>
+
+				  <div style="width:100%;">
+
+            <div>
+
+            
+
+              <div class="title-container">
+
+                <div class="title-container-line"></div>
+
+                <div class="title-container-text">2026-1�б� ���԰���</div>
+
+              </div>
+
+               
+
+	             <div class="content-container" id=""  style=''  >
+
+                 <div style="overflow: hidden; margin-bottom: 20px"> 
+
+                   <a class="site-link site-font-color" href="/ilos/st/course/submain_form.acl" onclick="eclassRoom('A20261118031052182850c01'); return false;" title="���ǽ� ����"><span class="content-title " style="float: left; cursor: pointer;">��ü�������α׷���(��ǻ��������(��)-01)</span></a>
+
+                   
+
+	                 <img src="/ilos/images/common/contents/lecture_type_0.png" style="float: right; margin-top: 8px;" title="�������μ���" />
+
+	               </div>
+
+                 <ul class="content-author" style="clear:both; overflow: hidden;">
+
+                   <li style="clear:both; overflow: hidden;"><span style="float: left;">������</span></li>
+
+	                 <li style="clear:both; overflow: hidden;"><span style="float: left;">��(2,3),��(2,3)&nbsp;</span></li>
+
+	               </ul>
+
+	             </div>
+
+             
+
+                <div class="content-container" id="" style="background-image:url(/ilos/images/common/thumb_1196.png);">
+
+                  <div style="overflow: hidden; margin-bottom: 20px"> 
+
+                     <p class="content-title" style="float: left; ">ĸ���������(��ǻ��������(��)-01) </p><img src="/ilos/images/common/contents/lecture_type_0.png" style="float: right; margin-top: 8px;" title="�������μ���"  />
+
+                  </div>
+
+                  <ul class="content-author" style="clear:both; overflow: hidden;">
+
+                    <li style="clear:both; overflow: hidden;"><span>������</span></li>
+
+                    <li style="clear:both; overflow: hidden;"><span style="float: left;">��(5,6)&nbsp;</span></li>
+
+                  </ul>
+
+                </div>
+
+             
+
+                <div class="content-container" id="" style="background-image:url(/ilos/images/common/thumb_1196.png);">
+
+                  <div style="overflow: hidden; margin-bottom: 20px"> 
+
+                     <p class="content-title" style="float: left; ">AI������Ʈ�����Ͼ(��ǻ��������(��)-01) </p><img src="/ilos/images/common/contents/lecture_type_0.png" style="float: right; margin-top: 8px;" title="�������μ���"  />
+
+                  </div>
+
+                  <ul class="content-author" style="clear:both; overflow: hidden;">
+
+                    <li style="clear:both; overflow: hidden;"><span>�̶ֹ�</span></li>
+
+                    <li style="clear:both; overflow: hidden;"><span style="float: left;">��(2,3,4)&nbsp;</span></li>
+
+                  </ul>
+
+                </div>
+
+             
+
+                <div class="content-container" id="" style="background-image:url(/ilos/images/common/thumb_1196.png);">
+
+                  <div style="overflow: hidden; margin-bottom: 20px"> 
+
+                     <p class="content-title" style="float: left; ">���Ҿ� �Բ��ϴ� ����(��ǻ��������(��)-01) </p><img src="/ilos/images/common/contents/lecture_type_0.png" style="float: right; margin-top: 8px;" title="�������μ���"  />
+
+                  </div>
+
+                  <ul class="content-author" style="clear:both; overflow: hidden;">
+
+                    <li style="clear:both; overflow: hidden;"><span>�ڹν�</span></li>
+
+                    <li style="clear:both; overflow: hidden;"><span style="float: left;">ȭ(8)&nbsp;</span></li>
+
+                  </ul>
+
+                </div>
+
+             
+
+                <div class="content-container" id="" style="background-image:url(/ilos/images/common/thumb_1196.png);">
+
+                  <div style="overflow: hidden; margin-bottom: 20px"> 
+
+                     <p class="content-title" style="float: left; ">�����ͺ��̽�(��ǻ��������(��)-01) </p><img src="/ilos/images/common/contents/lecture_type_0.png" style="float: right; margin-top: 8px;" title="�������μ���"  />
+
+                  </div>
+
+                  <ul class="content-author" style="clear:both; overflow: hidden;">
+
+                    <li style="clear:both; overflow: hidden;"><span>������</span></li>
+
+                    <li style="clear:both; overflow: hidden;"><span style="float: left;">��(2,3),ȭ(2,3)&nbsp;</span></li>
+
+                  </ul>
+
+                </div>
+
+             
+
+                <div class="content-container" id="" style="background-image:url(/ilos/images/common/thumb_1196.png);">
+
+                  <div style="overflow: hidden; margin-bottom: 20px"> 
+
+                     <p class="content-title" style="float: left; ">������������(��ǻ��������(��)-01) </p><img src="/ilos/images/common/contents/lecture_type_0.png" style="float: right; margin-top: 8px;" title="�������μ���"  />
+
+                  </div>
+
+                  <ul class="content-author" style="clear:both; overflow: hidden;">
+
+                    <li style="clear:both; overflow: hidden;"><span>�̼���</span></li>
+
+                    <li style="clear:both; overflow: hidden;"><span style="float: left;">��(5,6,7)&nbsp;</span></li>
+
+                  </ul>
+
+                </div>
+
+             
+
+                <div class="content-container" id="" style="background-image:url(/ilos/images/common/thumb_1196.png);">
+
+                  <div style="overflow: hidden; margin-bottom: 20px"> 
+
+                     <p class="content-title" style="float: left; ">�����â��(��ǻ��������(��)-01) </p><img src="/ilos/images/common/contents/lecture_type_0.png" style="float: right; margin-top: 8px;" title="�������μ���"  />
+
+                  </div>
+
+                  <ul class="content-author" style="clear:both; overflow: hidden;">
+
+                    <li style="clear:both; overflow: hidden;"><span>�̶ֹ�</span></li>
+
+                    <li style="clear:both; overflow: hidden;"><span style="float: left;">��(7,8)&nbsp;</span></li>
+
+                  </ul>
+
+                </div>
+
+             
+
+                <div class="content-container" id="" style="background-image:url(/ilos/images/common/thumb_1196.png);">
+
+                  <div style="overflow: hidden; margin-bottom: 20px"> 
+
+                     <p class="content-title" style="float: left; ">��ŷ��ħ�ش���(��ǻ��������(��)-01) </p><img src="/ilos/images/common/contents/lecture_type_0.png" style="float: right; margin-top: 8px;" title="�������μ���"  />
+
+                  </div>
+
+                  <ul class="content-author" style="clear:both; overflow: hidden;">
+
+                    <li style="clear:both; overflow: hidden;"><span>�̼���</span></li>
+
+                    <li style="clear:both; overflow: hidden;"><span style="float: left;">ȭ(5,6,7)&nbsp;</span></li>
+
+                  </ul>
+
+                </div>
+
+             
+
+             <div style="clear:both;"></div>
+
+             
+
+	          </div>
+
+	          <div id="lecture_list2"></div>
+
+	          <div class="content-container" id="onceLecture" style="width: calc(100% - 12px); box-sizing: border-box; text-align: center; cursor: pointer;" onclick="onceLecture1(); return false;">���� �б� ������</div>
+
+          </div>
+
+
+
+        <div style="clear:both;"></div>
+
+Found ky values: set()

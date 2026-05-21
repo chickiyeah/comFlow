@@ -1,0 +1,8 @@
+﻿plink : Access denied
+At line:2 char:1
++ plink -pw "cjm@0124" -hostkey "SHA256:bdqDeLl2uEvQatWWg5ipAY/1o24REsM ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Access denied:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+FATAL ERROR: Configured password was not accepted

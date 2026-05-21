@@ -1,0 +1,292 @@
+﻿from datetime import datetime
+
+from fastapi import Depends, FastAPI, Request, Form, HTTPException
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
+import qrcode
+import base64
+import requests
+from io import BytesIO
+from requests import Session as DbSession
+import uvicorn
+from db import get_db
+import haksik
+from intranet import run_vision_final_extractor
+
+
+app = FastAPI()
+templates = Jinja2Templates(directory="templates")
+
+
+# ── 요청 모델 ────────────────────────────────────────────────
+class LoginRequest(BaseModel):
+    user_id: str
+    user_pw: str
+
+class PortalRequest(BaseModel):
+    """저장된 토큰 + 쿠키로 학교 포털 API 호출"""
+    user_id: str
+    access_token: str
+    session_cookies: dict   # 로그인 시 직렬화된 세션 쿠키 (필수)
+
+
+# ── 유틸 ─────────────────────────────────────────────────────
+def generate_qr_base64(data: str):
+    qr = qrcode.QRCode(version=1, box_size=10, border=1)
+    qr.add_data(data)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buffered = BytesIO()
+    img.save(buffered, format="PNG")
+    return base64.b64encode(buffered.getvalue()).decode()
+
+
+NMAIN_URL = "https://my.jvision.ac.kr/NMain"
+
+def _nmain_headers(access_token: str) -> dict:
+    """NMain 요청에 필요한 공통 헤더"""
+    return {
+        "Accept": "application/xml, text/xml, */*",
+        "Content-Type": "text/xml",
+        "X-Requested-With": "XMLHttpRequest",
+        "Referer": "https://my.jvision.ac.kr/MyVisionApp/index.jsp",
+        "Origin": "https://my.jvision.ac.kr",
+        "Host": "my.jvision.ac.kr",
+        "Cache-Control": "no-cache",
+        "Authorization": f"Bearer {access_token}",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    }
+
+
+def _restore_session(access_token: str, session_cookies: dict) -> requests.Session:
+    """저장된 쿠키 + 토큰으로 세션 복원"""
+    sess = requests.Session()
+    sess.cookies.update(session_cookies)
+    sess.headers.update({"Authorization": f"Bearer {access_token}"})
+    return sess
+
+
+# ── 기존 페이지 ───────────────────────────────────────────────
+@app.get("/", response_class=HTMLResponse)
+def login_page(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+
+@app.post("/mobile-id", response_class=HTMLResponse)
+def show_id_card(request: Request, user_id: str = Form(...), user_pw: str = Form(...),
+                 db: DbSession = Depends(get_db)):
+    try:
+        student_info, file_info, _, __, ___ = run_vision_final_extractor(db, user_id, user_pw)
+        qr = generate_qr_base64(student_info['학번'])
+        return templates.TemplateResponse("student_id.html", {
+            "request": request, "student": student_info, "file": file_info, "qr": qr
+        })
+    except Exception as e:
+        return HTMLResponse(f"<script>alert('로그인 실패: {e}'); location.href='/';</script>")
+
+
+@app.get("/haksik", response_class=HTMLResponse)
+async def get_haksik_page(request: Request):
+    weekly_menus = haksik.get_weekly_menu()
+    now = datetime.now()
+    today_str = now.strftime("%d")
+    today_full = now.strftime("%Y년 %m월 %d일")
+    weekday_kr = ["월", "화", "수", "목", "금", "토", "일"][now.weekday()]
+    today_menu = next((m for m in weekly_menus if m['day_num'] == today_str), None)
+    return templates.TemplateResponse("haksik.html", {
+        "request": request,
+        "today_date": f"{today_full} ({weekday_kr}요일)",
+        "menu": today_menu
+    })
+
+
+@app.get("/api/haksik")
+async def get_haksik_api(date: str = None):
+    data = haksik.get_weekly_menu(date)
+    return JSONResponse(content=data)
+
+
+# ── 학교 포털 인증 ─────────────────────────────────────────────
+
+@app.post("/api/sync-profile")
+async def sync_profile(req: LoginRequest, db: DbSession = Depends(get_db)):
+    """
+    학교 포털 로그인 → 학생정보 + 학생증사진 + ACCESS_TOKEN + REFRESH_TOKEN + 세션쿠키 반환
+    비밀번호는 이 요청에서만 사용, CampusFlow에 저장되지 않음
+    """
+    try:
+        student_info, file_info, access_token, refresh_token, session_cookies = \
+            run_vision_final_extractor(db, req.user_id, req.user_pw)
+
+        if isinstance(student_info, dict) and student_info.get("res") == "bad login":
+            return JSONResponse(
+                content={"success": False, "message": "학번 또는 비밀번호가 올바르지 않습니다."},
+                status_code=401
+            )
+
+        return JSONResponse(content={
+            "success": True,
+            "data": {
+                "name":           student_info.get("이름"),
+                "studentId":      student_info.get("학번"),
+                "department":     student_info.get("학과"),
+                "phone":          student_info.get("전화번호"),
+                "email":          student_info.get("이메일"),
+                "address":        student_info.get("주소"),
+                "profileImage":   file_info.get("이미지데이터") if file_info else None,
+                # ── 토큰 두 개 ──────────────────────────────────
+                "accessToken":    access_token,   # Bearer 토큰 (짧음, 곧 만료)
+                "refreshToken":   refresh_token,  # 리프레시 토큰 (김, 재발급용)
+                # ── 세션 쿠키 (토큰과 함께 보내야 함) ──────────────
+                "sessionCookies": session_cookies,
+            }
+        })
+    except Exception as e:
+        return JSONResponse(
+            content={"success": False, "message": f"동기화 오류: {str(e)}"},
+            status_code=500
+        )
+
+
+# ── 토큰 + 쿠키로 데이터 조회 ─────────────────────────────────
+
+@app.post("/api/grades")
+async def fetch_grades(req: PortalRequest):
+    """
+    저장된 ACCESS_TOKEN + 세션쿠키로 성적 조회
+    intranet.py 플로우: 쿠키 복원 → Bearer 토큰 → NMain XML 요청
+    """
+    try:
+        import urllib3
+        from bs4 import BeautifulSoup
+        urllib3.disable_warnings()
+
+        # 세션 복원 (쿠키 + 토큰)
+        sess = _restore_session(req.access_token, req.session_cookies)
+        headers = _nmain_headers(req.access_token)
+
+        # 성적 조회 XML (SQL_ID 실험 필요)
+        payload = f"""<?xml version="1.0" encoding="UTF-8"?>
+<Root xmlns="http://www.nexacroplatform.com/platform/dataset">
+    <Parameters>
+        <Parameter id="fsp_action">JVCAction</Parameter>
+        <Parameter id="fsp_cmd">execute</Parameter>
+        <Parameter id="fsp_logId">all</Parameter>
+        <Parameter id="fsp_logging">true</Parameter>
+    </Parameters>
+    <Dataset id="fsp_ds_cmd">
+        <ColumnInfo>
+            <Column id="TX_NAME" type="string" size="100"/>
+            <Column id="TYPE" type="string" size="10"/>
+            <Column id="SQL_ID" type="string" size="200"/>
+            <Column id="EXEC_TYPE" type="STRING" size="2"/>
+        </ColumnInfo>
+        <Rows>
+            <Row>
+                <Col id="TYPE">N</Col>
+                <Col id="SQL_ID">hs/gr/gr01:gr_hakjum_list_s00</Col>
+                <Col id="EXEC_TYPE">B</Col>
+            </Row>
+        </Rows>
+    </Dataset>
+    <Dataset id="fsp_ds_user">
+        <ColumnInfo>
+            <Column id="USER_ID" type="string" size="100"/>
+        </ColumnInfo>
+        <Rows>
+            <Row><Col id="USER_ID">{req.user_id}</Col></Row>
+        </Rows>
+    </Dataset>
+</Root>"""
+
+        res = sess.post(
+            NMAIN_URL,
+            data=payload.encode("utf-8"),
+            headers=headers,
+            verify=False,
+            timeout=20
+        )
+
+        # XML 응답에서 ErrorCode 확인
+        from bs4 import BeautifulSoup as BS
+        raw = res.text
+        try:
+            soup = BS(raw, 'xml')
+            err_code = soup.find("Parameter", id="ErrorCode")
+            err_msg  = soup.find("Parameter", id="ErrorMsg")
+            if err_code and int(err_code.text) < 0:
+                return JSONResponse(content={
+                    "success": False,
+                    "errorCode": err_code.text,
+                    "message": err_msg.text if err_msg else "포털 오류",
+                    "raw": raw[:1000]
+                })
+        except Exception:
+            pass
+
+        return JSONResponse(content={
+            "success": True,
+            "status": res.status_code,
+            "raw": raw[:10000]
+        })
+
+    except Exception as e:
+        return JSONResponse(
+            content={"success": False, "message": str(e)},
+            status_code=500
+        )
+
+
+@app.post("/api/portal")
+async def fetch_portal_data(req: PortalRequest, sql_id: str = "hs/gr/gr01:gr_hakjum_list_s00"):
+    """
+    범용 포털 데이터 조회 — SQL_ID를 파라미터로 받아서 다양한 데이터 조회 가능
+    """
+    try:
+        import urllib3
+        urllib3.disable_warnings()
+
+        sess = _restore_session(req.access_token, req.session_cookies)
+        headers = _nmain_headers(req.access_token)
+
+        payload = f"""<?xml version="1.0" encoding="UTF-8"?>
+<Root xmlns="http://www.nexacroplatform.com/platform/dataset">
+    <Parameters>
+        <Parameter id="fsp_action">JVCAction</Parameter>
+        <Parameter id="fsp_cmd">execute</Parameter>
+    </Parameters>
+    <Dataset id="fsp_ds_cmd">
+        <ColumnInfo>
+            <Column id="TYPE" type="string" size="10"/>
+            <Column id="SQL_ID" type="string" size="200"/>
+            <Column id="EXEC_TYPE" type="STRING" size="2"/>
+        </ColumnInfo>
+        <Rows>
+            <Row>
+                <Col id="TYPE">N</Col>
+                <Col id="SQL_ID">{sql_id}</Col>
+                <Col id="EXEC_TYPE">B</Col>
+            </Row>
+        </Rows>
+    </Dataset>
+    <Dataset id="fsp_ds_user">
+        <ColumnInfo>
+            <Column id="USER_ID" type="string" size="100"/>
+        </ColumnInfo>
+        <Rows>
+            <Row><Col id="USER_ID">{req.user_id}</Col></Row>
+        </Rows>
+    </Dataset>
+</Root>"""
+
+        res = sess.post(NMAIN_URL, data=payload.encode("utf-8"),
+                        headers=headers, verify=False, timeout=20)
+        return JSONResponse(content={"success": True, "raw": res.text[:10000]})
+
+    except Exception as e:
+        return JSONResponse(content={"success": False, "message": str(e)}, status_code=500)
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -41,7 +41,19 @@ public enum ErrorCode {
     DUPLICATE_EMAIL(HttpStatus.CONFLICT, "이미 사용 중인 이메일입니다."),
 
     // AI
-    AI_SERVICE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "AI 서비스 오류가 발생했습니다.");
+    AI_SERVICE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "AI 서비스 오류가 발생했습니다."),
+
+    // 스터디
+    STUDY_GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "스터디 그룹을 찾을 수 없습니다."),
+    STUDY_GROUP_FULL(HttpStatus.CONFLICT, "스터디 그룹 정원이 가득 찼습니다."),
+    ALREADY_JOINED(HttpStatus.CONFLICT, "이미 참가한 스터디 그룹입니다."),
+    NOT_GROUP_MEMBER(HttpStatus.FORBIDDEN, "스터디 그룹 멤버가 아닙니다."),
+
+    // 강의 리뷰
+    REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다."),
+
+    // 채용 알리미
+    JOB_ALERT_NOT_FOUND(HttpStatus.NOT_FOUND, "채용 알리미를 찾을 수 없습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;
