@@ -114,7 +114,9 @@ export default function TopNav({ title }) {
             <span className="absolute top-2 right-2 w-2 h-2 bg-error rounded-full ring-2 ring-white dark:ring-[#0a0c10]" />
           </button>
 
-          <button className="hidden lg:flex p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors active:scale-95">
+          <button onClick={() => navigate('/profile')}
+            className="hidden lg:flex p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors active:scale-95"
+            title="설정 / 프로필">
             <span className="material-symbols-outlined">settings</span>
           </button>
 
@@ -137,10 +139,32 @@ export default function TopNav({ title }) {
             {showMenu && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
-                <div className="absolute right-0 top-12 bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-100 dark:border-slate-800 py-2 w-36 z-50">
+                <div className="absolute right-0 top-12 bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-100 dark:border-slate-800 py-2 w-44 z-50">
+                  <button
+                    onClick={() => { navigate('/profile'); setShowMenu(false) }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-on-surface dark:text-slate-300 hover:bg-surface-container-low dark:hover:bg-slate-800 transition-colors flex items-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">manage_accounts</span>
+                    프로필 / 설정
+                  </button>
+                  <button
+                    onClick={() => { navigate('/calendar'); setShowMenu(false) }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-on-surface dark:text-slate-300 hover:bg-surface-container-low dark:hover:bg-slate-800 transition-colors flex items-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">calendar_month</span>
+                    캘린더
+                  </button>
+                  <button
+                    onClick={() => { navigate('/study'); setShowMenu(false) }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-on-surface dark:text-slate-300 hover:bg-surface-container-low dark:hover:bg-slate-800 transition-colors flex items-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">groups</span>
+                    스터디
+                  </button>
+                  <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
                   <button
                     onClick={handleLogout}
-                    className="w-full text-left px-4 py-2 text-sm text-error hover:bg-error-container dark:hover:bg-error/20 transition-colors flex items-center gap-2"
+                    className="w-full text-left px-4 py-2.5 text-sm text-error hover:bg-error-container dark:hover:bg-error/20 transition-colors flex items-center gap-2"
                   >
                     <span className="material-symbols-outlined text-[16px]">logout</span>
                     로그아웃
@@ -204,9 +228,22 @@ export default function TopNav({ title }) {
                 <span className="ml-auto w-2 h-2 bg-error rounded-full" />
               </button>
 
-              <button className="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-surface-container dark:hover:bg-slate-800 transition-colors text-on-surface dark:text-slate-200">
+              <button onClick={() => { navigate('/profile'); setShowDrawer(false) }}
+                className="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-surface-container dark:hover:bg-slate-800 transition-colors text-on-surface dark:text-slate-200">
                 <span className="material-symbols-outlined text-slate-500 dark:text-slate-400">settings</span>
-                <span className="text-sm font-medium">설정</span>
+                <span className="text-sm font-medium">설정 / 프로필</span>
+              </button>
+
+              <button onClick={() => { navigate('/calendar'); setShowDrawer(false) }}
+                className="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-surface-container dark:hover:bg-slate-800 transition-colors text-on-surface dark:text-slate-200">
+                <span className="material-symbols-outlined text-slate-500 dark:text-slate-400">calendar_month</span>
+                <span className="text-sm font-medium">캘린더</span>
+              </button>
+
+              <button onClick={() => { navigate('/study'); setShowDrawer(false) }}
+                className="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-surface-container dark:hover:bg-slate-800 transition-colors text-on-surface dark:text-slate-200">
+                <span className="material-symbols-outlined text-slate-500 dark:text-slate-400">groups</span>
+                <span className="text-sm font-medium">스터디</span>
               </button>
             </div>
 

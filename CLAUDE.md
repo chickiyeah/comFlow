@@ -4,6 +4,16 @@
 
 ---
 
+## ⚠️ 필수 규칙 — 작업 시작 전 반드시 확인
+
+**노션을 열어 최신 상태를 확인하기 전까지 코드를 수정하지 않는다.**
+
+- 작업 요청이 들어오면 먼저 노션 Memory Hub(`🧠 Claude Memory Hub`)와 `CampusFlow — 프로젝트 작업 로그`를 조회해 현재 상태·진행 중인 작업·결정 사항을 파악한다.
+- 노션 MCP 도구(`notion-fetch`, `notion-search`)가 동작하지 않거나 접근이 불가한 경우, 코드 수정을 시작하지 말고 사용자에게 노션 접근 불가 상황을 알린 뒤 지시를 기다린다.
+- 노션 내용이 코드와 다를 경우 노션이 Source of Truth다. 삭제하지 말고 추가·보완만 한다.
+
+---
+
 ## 실행 명령어
 
 ```bash
@@ -34,39 +44,52 @@ C:\apache-maven-3.9.15-bin\apache-maven-3.9.15\bin\mvn.cmd compile -q
 | 발신 주소 | `noreply@campusflow.jvision.org` |
 | 서버 SSH | `ssh ruddls030@10.8.0.17` (pw: dlstn0722, sudo 가능) |
 | 프론트 도메인 | `campusflow.jvision.org` (Vite allowedHosts 등록됨) |
-| **개발 서버** | `10.8.0.2` — rndp/cjm@0124, Docker Compose 운영 |
+| **운영 서버** | `10.8.0.29` — user/D@lstn!0722, Windows NSSM 운영 |
 
-### 개발 서버 (10.8.0.2) Docker Compose
+### 운영 서버 (10.8.0.29) Windows NSSM
 
-프로젝트 경로: `/home/ruddls030/campusflow`
+경로: `C:\campusflow\`
 
-```bash
+```powershell
 # SSH 접속
-ssh rndp@10.8.0.2  # pw: cjm@0124
+ssh user@10.8.0.29  # pw: D@lstn!0722
 
-# 컨테이너 관리
-cd /home/ruddls030/campusflow
-docker-compose ps               # 상태 확인
-docker-compose logs -f          # 전체 로그 스트림
-docker-compose logs -f backend  # 백엔드 로그만
-docker-compose up -d --build    # 재빌드 후 시작
-docker-compose down             # 중지
+# 서비스 관리 (NSSM)
+nssm status CampusFlowBackend     # 백엔드 상태
+nssm restart CampusFlowBackend    # 백엔드 재시작
+nssm stop CampusFlowBackend       # 백엔드 중지
+nssm start CampusFlowBackend      # 백엔드 시작
+
+# 로그
+Get-Content C:\campusflow\logs\backend.log -Tail 50
+Get-Content C:\campusflow\logs\backend-error.log -Tail 50
+
+# nginx 관리
+C:\nginx\nginx.exe -s reload      # 설정 리로드
+C:\nginx\nginx.exe -s stop        # 중지
 
 # 접속 주소
-# 백엔드: http://10.8.0.2:8080
-# 프론트: http://10.8.0.2:3000
+# 백엔드: http://10.8.0.29:8080
+# 프론트: http://10.8.0.29:3000
 ```
 
 **배포 절차 (로컬 수정 후):**
 ```bash
-# 1. 소스 전송 (Git Bash / pscp)
-"/c/Program Files/PuTTY/pscp" -pw "cjm@0124" <파일> rndp@10.8.0.2:/home/ruddls030/campusflow/<경로>
+# 백엔드: JAR 빌드 후 전송 + 서비스 재시작
+mvn package -DskipTests
+"/c/Program Files/PuTTY/pscp" -pw "D@lstn!0722" target/*.jar user@10.8.0.29:C:/campusflow/campusflow.jar
+"/c/Program Files/PuTTY/plink" -pw "D@lstn!0722" user@10.8.0.29 "nssm restart CampusFlowBackend"
 
-# 2. 서버에서 재빌드
-ssh rndp@10.8.0.2 "cd /home/ruddls030/campusflow && docker-compose up -d --build"
+# 프론트엔드: Vite 빌드 후 dist 전송
+cd frontend && npm run build
+"/c/Program Files/PuTTY/pscp" -pw "D@lstn!0722" -r dist/. user@10.8.0.29:C:/campusflow/frontend/
+"/c/Program Files/PuTTY/plink" -pw "D@lstn!0722" user@10.8.0.29 "C:/nginx/nginx.exe -s reload"
+
+# 또는 deploy.sh 사용
+./deploy.sh all        # 백엔드+프론트 전체
+./deploy.sh backend    # 백엔드만
+./deploy.sh frontend   # 프론트만
 ```
-
-네트워크: `network_mode: host` — 컨테이너가 호스트 네트워크 직접 사용. `localhost:8080`이 백엔드, DB는 10.8.0.1:3307 직접 접근.
 
 ---
 
@@ -78,15 +101,21 @@ ssh rndp@10.8.0.2 "cd /home/ruddls030/campusflow && docker-compose up -d --build
 - Spring Security + JWT (jjwt 0.12.6)
 - dotenv-java (.env 로드, `CampusFlowApplication.main()`에서 처리)
 - RestTemplate 빈 — `config/AppConfig.java`에 `@Bean` 정의됨 (외부 API 호출용)
-- RestClient (Spring 6) — `OpenAiService`, `ChromaDbService`에서 사용
+- RestClient (Spring 6) — `JvisionAiService`, `OllamaService`, `GeminiService`, `KomjeongRagService`에서 사용
 - Jsoup 1.17.2 (고용24 HTML 스크래핑)
 - Jackson ObjectMapper (JSON 파싱)
 
-**AI**
-- OpenAI gpt-4o (primary)
-- Claude claude-opus-4-7 (backup fallback)
-- `AiFacadeService` — OpenAI 먼저 시도, 실패 시 Claude 호출
-- ChromaDB RAG (벡터 검색, 학과 자료 기반)
+**AI 폴백 체인** (`AiFacadeService`)
+1. jvision.ai (전주비전대 자체 vLLM `vLLM.GPT-V-base`) — 한국어 정상 지원. **reasoning 모델**이라 답변이 `content` 또는 `reasoning` 필드에 담김(둘 다 확인 필요).
+2. Ollama 로컬 round-robin (10.8.0.30~34, qwen3:8b) — `.30/.34`는 자주 다운(connect timeout 5초로 빠른 스킵).
+3. Google Gemini `gemini-2.0-flash` (최후 폴백) — 무료 티어 일일 쿼터 주의(429).
+- 빈 응답은 캐싱 안 함 (`@Cacheable unless="#result.isBlank()"`).
+
+**학과 자료 RAG (내부 로드맵)** — `KomjeongRagService`
+- **컴정이(komjeong)** OpenAI 호환 엔드포인트 경유: `http://10.8.0.17:8000/v1/chat/completions`, model `komjeong`.
+- ~35,000 학과 청크(자격증·취업·진로) BM25+벡터 하이브리드 RAG. 마크다운 산문 반환 → jvision.ai가 JSON 구조화(2단계).
+- RAG 미스 시 "수집 중" 플레이스홀더/짧은 응답 → 빈 컨텍스트 처리 → `RoadmapService`가 외부(일반지식) 프롬프트로 폴백.
+- ⚠️ **ChromaDB 직접 연결 금지**: 구 `ChromaDbService`(`10.8.0.1:8000` `/api/v1/campus_docs`)는 폐기됨. 실제 ChromaDB는 `10.8.0.17:8001` **v2 API 전용**이고 임베딩이 client-side(paraphrase-multilingual)라 `query_texts` 불일치. 반드시 komjeong 경유.
 
 **프론트엔드**
 - React 18 + Vite + Tailwind CSS
@@ -259,11 +288,19 @@ TopNav 모바일: 햄버거 메뉴 → 우측 드로어 패널 (프로필/다크
 
 ## 변경 이력
 
+### 2026-06-01
+- **AI 로드맵 `useExternalAi=false` 500 수정** — 근본 원인은 구 `ChromaDbService`가 폐기된 `10.8.0.1:8000` v1 API에 붙어 404→500을 던진 것. ChromaDb 직접 연결 제거하고 **komjeong RAG(`KomjeongRagService`, `10.8.0.17:8000`)** 경유로 전환. komjeong이 학과자료 마크다운 반환 → jvision.ai가 JSON 구조화. RAG 미스(플레이스홀더) 시 외부 일반지식 프롬프트로 폴백 → 항상 유효한 로드맵 반환. `ChromaDbService.java` 삭제.
+- **jvision.ai reasoning 모델 대응** — `vLLM.GPT-V-base`는 답변이 `content` 또는 `reasoning`에 담김. `'{'` 포함 필드 우선 선택하도록 추출 로직 보강. (한국어는 정상 지원 — 과거 "한글 거부" 오판은 셸 UTF-8 인코딩 깨짐 때문이었음)
+- **Gemini 모델 갱신** — `gemini-1.5-flash`(404 deprecated) → `gemini-2.0-flash` + HTTP 예외 graceful 처리.
+- **Ollama 다운 서버 빠른 스킵** — `SimpleClientHttpRequestFactory` connect 5초/read 180초. `.30/.34` 다운 시 42초→5초.
+- **AiFacadeService 빈 응답 캐싱 방지** — `@Cacheable unless="#result.isBlank()"`.
+- **스터디 그룹 방장 삭제 추가** — `DELETE /api/study/{id}` (방장 전용), `StudyService.delete()`, `StudyMemberRepository.deleteByGroupId()`.
+
 ### 2026-05-18
 - **`config/AppConfig.java` 신규** — `RestTemplate` `@Bean` 정의 추가. 기존 코드에 누락되어 있어 `JobkoreaService` 등 5개 서비스 기동 실패하던 버그 수정.
 - **`AssistantService.java` 버그 수정** — `GradWarning.earned` 가 `0`으로 하드코딩되던 문제 수정. `analyze()`에서 `earnedByName` 맵 계산 후 `parseResponse()`에 전달, 실제 이수학점·부족학점 반영.
 - **`Dashboard.jsx` API 연결** — GPA·이수학점(`GET /api/grades/me`), 출석률·결석경고(`GET /api/attendance/me`) 실 데이터로 교체. `Promise.all` 병렬 호출, 로딩 중 `…` 표시.
-- **개발 서버 구축** — `10.8.0.2`에 Docker Compose 환경 구성. 백엔드(8080) + 프론트(3000) 컨테이너, `network_mode: host`, `/home/ruddls030/campusflow` 배치.
+- **운영 서버 구축** — `10.8.0.29` Windows 서버에 NSSM + nginx 환경 구성. 백엔드(8080) + 프론트(3000), `C:\campusflow\` 배치.
 
 ---
 

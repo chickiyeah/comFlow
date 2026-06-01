@@ -4,7 +4,10 @@
     "academic": "Academic",
     "facilities": "Facilities",
     "career": "Career",
-    "technical": "Portfolio"
+    "technical": "Portfolio",
+    "calendar": "Calendar",
+    "study": "Study",
+    "profile": "Settings"
   },
   "common": {
     "save": "Save",

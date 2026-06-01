@@ -4,7 +4,10 @@
     "academic": "学業",
     "facilities": "施設",
     "career": "キャリア",
-    "technical": "ポートフォリオ"
+    "technical": "ポートフォリオ",
+    "calendar": "カレンダー",
+    "study": "スタディ",
+    "profile": "設定"
   },
   "common": {
     "save": "保存",

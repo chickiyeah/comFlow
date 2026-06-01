@@ -1,0 +1,1 @@
+import{a as e}from"./index-DuPUoQo_.js";const c=()=>e.get("/profile/me"),t=(s,o)=>e.post("/profile/sync",{schoolPassword:s,studentId:o}),i=()=>e.delete("/profile/sync"),p=(s,o)=>e.put("/profile/academic",{grade:s,semester:o});export{i as d,c as g,t as s,p as u};

@@ -58,6 +58,9 @@ public class Student {
     @Column(columnDefinition = "TEXT")
     private String portalSessionCookies;  // 세션 쿠키 직렬화 JSON (Access Token과 함께 필수)
 
+    @Column(columnDefinition = "TEXT")
+    private String portalPassword;        // 학교 포털 비밀번호 (저장 동의 후 보관)
+
     @Builder
     public Student(User user, String studentId, String name, int grade, int semester,
                    String department, String phone, String email) {
@@ -80,7 +83,7 @@ public class Student {
     public void applyIntranetSync(String name, String phone, String email,
                                    String profileImageData,
                                    String accessToken, String refreshToken,
-                                   String sessionCookiesJson) {
+                                   String sessionCookiesJson, String password) {
         if (name != null && !name.isBlank())        this.name = name;
         if (phone != null && !phone.isBlank())       this.phone = phone;
         if (email != null && !email.isBlank())       this.email = email;
@@ -88,8 +91,18 @@ public class Student {
         if (accessToken != null)                     this.portalAccessToken = accessToken;
         if (refreshToken != null)                    this.portalRefreshToken = refreshToken;
         if (sessionCookiesJson != null)              this.portalSessionCookies = sessionCookiesJson;
+        if (password != null && !password.isBlank()) this.portalPassword = password;
         this.intranetSyncEnabled = true;
         this.intranetSyncedAt    = LocalDateTime.now();
+    }
+
+    public void setStudentId(String studentId) {
+        this.studentId = studentId;
+    }
+
+    public void updateAcademic(int grade, int semester) {
+        this.grade = grade;
+        this.semester = semester;
     }
 
     public void disableIntranetSync() {
@@ -97,5 +110,6 @@ public class Student {
         this.portalAccessToken      = null;
         this.portalRefreshToken     = null;
         this.portalSessionCookies   = null;
+        this.portalPassword         = null;
     }
 }

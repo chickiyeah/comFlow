@@ -1,5 +1,6 @@
 package com.campusflow.domain.profile.controller;
 
+import com.campusflow.domain.profile.dto.AcademicUpdateRequest;
 import com.campusflow.domain.profile.dto.ProfileResponse;
 import com.campusflow.domain.profile.dto.SyncRequest;
 import com.campusflow.domain.profile.service.ProfileSyncService;
@@ -31,7 +32,15 @@ public class ProfileController {
     public ApiResponse<ProfileResponse> syncProfile(
             @AuthenticationPrincipal String username,
             @Valid @RequestBody SyncRequest request) {
-        return ApiResponse.ok(profileSyncService.syncWithPortal(username, request.schoolPassword()));
+        return ApiResponse.ok(profileSyncService.syncWithPortal(username, request.schoolPassword(), request.studentId()));
+    }
+
+    /** 학년/학기 수정 */
+    @PutMapping("/academic")
+    public ApiResponse<ProfileResponse> updateAcademic(
+            @AuthenticationPrincipal String username,
+            @Valid @RequestBody AcademicUpdateRequest request) {
+        return ApiResponse.ok(profileSyncService.updateAcademic(username, request.grade(), request.semester()));
     }
 
     /** 연동 비활성화 */

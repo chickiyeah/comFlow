@@ -25,8 +25,6 @@ export const searchQualifications = (keyword) =>
   api.get('/career/search/certs/list', { params: { keyword } })
 export const getQualificationDetail = (jmCd, qualgbCd) =>
   api.get('/career/search/certs/detail', { params: { jmCd, qualgbCd } })
-export const getPracticeQuestions = (keyword, year) =>
-  api.get('/career/search/certs/questions', { params: { keyword, year } })
 export const getExamLocations = (brchCd) =>
   api.get('/career/search/certs/locations', { params: { brchCd } })
 

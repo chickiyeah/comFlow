@@ -1,0 +1,1 @@
+import{a as t}from"./index-DuPUoQo_.js";const c=()=>t.get("/notices"),o=(e=3)=>t.get("/notices/recent",{params:{limit:e}}),a=e=>t.post("/notices",e),i=e=>t.delete(`/notices/${e}`);export{c as a,a as c,i as d,o as g};

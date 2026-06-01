@@ -21,7 +21,7 @@ import java.util.Map;
 public class GeminiService {
 
     private static final String BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models";
-    private static final String MODEL    = "gemini-1.5-flash";
+    private static final String MODEL    = "gemini-2.0-flash";
 
     @Value("${gemini.api.key:}")
     private String apiKey;
@@ -42,20 +42,20 @@ public class GeminiService {
                 )
         );
 
-        String raw = RestClient.create(BASE_URL).post()
-                .uri("/" + MODEL + ":generateContent?key=" + apiKey)
-                .header("Content-Type", "application/json")
-                .body(body)
-                .retrieve()
-                .body(String.class);
-
         try {
+            String raw = RestClient.create(BASE_URL).post()
+                    .uri("/" + MODEL + ":generateContent?key=" + apiKey)
+                    .header("Content-Type", "application/json")
+                    .body(body)
+                    .retrieve()
+                    .body(String.class);
+
             JsonNode root = objectMapper.readTree(raw);
             return root.path("candidates").get(0)
                     .path("content").path("parts").get(0)
                     .path("text").asText("");
         } catch (Exception e) {
-            log.warn("Gemini 응답 파싱 실패: {}", e.getMessage());
+            log.warn("Gemini 호출/파싱 실패: {}", e.getMessage());
             return "";
         }
     }

@@ -9,6 +9,7 @@ import { getTodaySchedule } from '../api/schedule'
 import { getRecentNotices } from '../api/notice'
 import { getTodayMeal } from '../api/meal'
 import { getMyWarnings } from '../api/planner'
+import { getProfile } from '../api/profile'
 
 const today = new Date()
 const weekday = ['일', '월', '화', '수', '목', '금', '토'][today.getDay()]
@@ -25,9 +26,9 @@ const calcStatus = (startTime, endTime) => {
 }
 
 const FACILITIES = [
-  { title: '도서관 실시간 좌석', sub: '현재 이용 가능: 45석', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuARJawatoRMKKMF71chdEK0mtvswv7_Tbu7Wp5HFaIaLf3hOUrUt7VRVXV8Y7hD4EAvDKZD23sViq03vpi-nA7m-G2hWwx-vcA6naB2vD3YXSLuXc3K4_VbfeWvcbVBFzZTnwwoubYCQ2EAmSIvmfIQowLDyYZf467_Bwhb-39T1_wujPdlp871EzqzUkdBnNCErvv9YrDruUAJiiCPKWXd-bS63l49EuBhjoOTYxeoXoLUTgIqHuQCf92ABCwlpulfIzcT9UADTPE' },
-  { title: '스터디룸 예약',      sub: '예약 가능한 룸: 12개', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAZyWsIn6XH-u0bL02glGQLM-AT56zOOaB6gaX4_vX2BlIvWZSgP1_kNHDYFoD3cV4DkEezcgdKOFDeL99_SSut5XBpRGL1YP-GFENQMxpX-tmi8MHQbdxQIHykbGw0XG1knW9k2Q0tgqeMBGYyrFmsbl6qNFUU8IlWbtUfOEOlGc1iUd2YiS6RRzLwc4Jk6SZyrxh2XIKrMDCftPsbijE3_V5lhUvJsgUgSbDS0H1sRcZd2Ieqher3nG5cyvOlsS1Iy1-8p8KrTtk' },
-  { title: '캠퍼스 셔틀 위치',   sub: '도착 예정: 3분 전',   img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBj7211K2sqxXyVlxTjrKoha3EKyevtSzM77A4IqLS2hPK0GAbnKweTAiAYvhuWBpZUwTD2utdPhyij666QrAdF93erQgO1nY4VljMgtnaB98tYQrhDN9yftEFPNlFOqtZGlr0OOmwWA1CI4jHWXNNb2qdD7P1IhoQa79DxzxzR-88SVjnQVY917n6GnSoIsgprY3ojTIgwYRm7zC_CtSVR-gwJzQNfdoAOP1JLHLAsZeLZUcIzJNmd2O4j8q43W1YOv6yQWmQI_sg' },
+  { title: '도서관', sub: '학술 자료 검색 및 좌석 현황', path: '/facilities', icon: 'local_library' },
+  { title: '스터디룸', sub: '그룹 스터디 공간 안내', path: '/facilities', icon: 'groups' },
+  { title: '통학버스', sub: '포털 연동 실시간 운행 정보', path: '/facilities', icon: 'directions_bus' },
 ]
 
 export default function Dashboard() {
@@ -35,6 +36,7 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const { t } = useTranslation()
 
+  const [profile, setProfileData] = useState(null)
   const [gradeSummary, setGradeSummary] = useState(null)
   const [attendanceSummary, setAttendanceSummary] = useState(null)
   const [todaySchedule, setTodaySchedule] = useState(null)
@@ -45,19 +47,21 @@ export default function Dashboard() {
 
   useEffect(() => {
     Promise.all([
+      getProfile().catch(() => null),
       getMyGrades().catch(() => null),
       getMyAttendance().catch(() => null),
       getTodaySchedule().catch(() => null),
       getRecentNotices(3).catch(() => null),
       getTodayMeal().catch(() => null),
       getMyWarnings().catch(() => null),
-    ]).then(([gradeRes, attendanceRes, scheduleRes, noticeRes, mealRes, warningRes]) => {
-      if (gradeRes?.data?.data)     setGradeSummary(gradeRes.data.data)
-      if (attendanceRes?.data?.data) setAttendanceSummary(attendanceRes.data.data)
-      if (scheduleRes?.data?.data)  setTodaySchedule(scheduleRes.data.data)
-      if (noticeRes?.data?.data)    setNotices(noticeRes.data.data)
-      if (mealRes?.data?.data)      setMeal(mealRes.data.data)
-      if (warningRes?.data?.data)   setWarning(warningRes.data.data)
+    ]).then(([profileRes, gradeRes, attendanceRes, scheduleRes, noticeRes, mealRes, warningRes]) => {
+      if (profileRes?.data)    setProfileData(profileRes.data)
+      if (gradeRes?.data)     setGradeSummary(gradeRes.data)
+      if (attendanceRes?.data) setAttendanceSummary(attendanceRes.data)
+      if (scheduleRes?.data)  setTodaySchedule(scheduleRes.data)
+      if (noticeRes?.data)    setNotices(noticeRes.data)
+      if (mealRes?.data)      setMeal(mealRes.data)
+      if (warningRes?.data)   setWarning(warningRes.data)
     }).finally(() => setLoading(false))
   }, [])
 
@@ -98,7 +102,7 @@ export default function Dashboard() {
         <div className="absolute top-0 right-0 opacity-10">
           <span className="material-symbols-outlined text-[120px]">school</span>
         </div>
-        <span className="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-2 py-0.5 rounded">컴퓨터정보과</span>
+        <span className="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-2 py-0.5 rounded">{profile?.department ?? '컴퓨터정보과'}</span>
         <h1 className="font-['Space_Grotesk'] text-xl font-black mt-2">{t('dashboard.greeting', { name: user?.name ?? '학생' })}</h1>
         <div className="grid grid-cols-2 gap-3 mt-4">
           <div className="bg-white/10 backdrop-blur-sm p-3 rounded-lg border border-white/10">
@@ -178,7 +182,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <h2 className="font-['Space_Grotesk'] text-2xl font-semibold text-primary dark:text-white">{user?.name ?? '학생'}</h2>
-                <p className="text-sm text-outline dark:text-slate-400">컴퓨터정보과 · 2학년</p>
+                <p className="text-sm text-outline dark:text-slate-400">{profile?.department ?? '컴퓨터정보과'} · {profile?.grade ?? '—'}학년 {profile?.semester ?? '—'}학기</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -315,22 +319,20 @@ export default function Dashboard() {
         <section className="col-span-12">
           <div className="grid grid-cols-3 gap-card_gap">
             {FACILITIES.map((f, i) => (
-              <div key={i} className="h-48 rounded-xl overflow-hidden relative group cursor-pointer border border-slate-100 dark:border-slate-800">
-                <img src={f.img} alt={f.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 dark:opacity-60 dark:group-hover:opacity-80" />
-                <div className="absolute inset-0 bg-gradient-to-t from-primary/90 dark:from-[#0b0e14] to-transparent flex flex-col justify-end p-6">
-                  <h4 className="text-white font-['Space_Grotesk'] text-lg font-medium">{f.title}</h4>
-                  <p className="text-secondary-fixed text-sm">{f.sub}</p>
+              <button key={i} onClick={() => navigate(f.path)}
+                className="h-36 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col items-center justify-center gap-3 hover:shadow-md hover:border-secondary-fixed/40 dark:hover:border-secondary-fixed/40 active:scale-[0.98] transition-all group">
+                <div className="w-12 h-12 rounded-xl bg-primary-container/30 dark:bg-secondary-fixed/10 flex items-center justify-center group-hover:bg-secondary-fixed/20 transition-colors">
+                  <span className="material-symbols-outlined text-primary dark:text-secondary-fixed text-[28px]">{f.icon}</span>
                 </div>
-              </div>
+                <div className="text-center">
+                  <p className="font-bold text-primary dark:text-white text-sm">{f.title}</p>
+                  <p className="text-[11px] text-outline dark:text-slate-400 mt-0.5">{f.sub}</p>
+                </div>
+              </button>
             ))}
           </div>
         </section>
       </div>
-
-      {/* FAB */}
-      <button className="fixed bottom-20 lg:bottom-8 right-6 lg:right-8 w-14 h-14 bg-secondary-fixed text-primary dark:text-[#0f172a] rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-transform z-40">
-        <span className="material-symbols-outlined text-3xl icon-fill">add</span>
-      </button>
     </Layout>
   )
 }

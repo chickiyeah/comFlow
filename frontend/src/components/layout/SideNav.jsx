@@ -1,18 +1,27 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import useAuthStore from '../../store/authStore'
 
 const NAV_ITEMS = [
-  { path: '/',           icon: 'dashboard',      key: 'dashboard'  },
+  { path: '/dashboard',  icon: 'dashboard',      key: 'dashboard'  },
   { path: '/academic',   icon: 'school',         key: 'academic'   },
   { path: '/facilities', icon: 'corporate_fare', key: 'facilities' },
   { path: '/career',     icon: 'work',           key: 'career'     },
   { path: '/technical',  icon: 'description',    key: 'technical'  },
+  { path: '/calendar',   icon: 'calendar_month', key: 'calendar'   },
+  { path: '/study',      icon: 'groups',         key: 'study'      },
+  { path: '/profile',    icon: 'manage_accounts',key: 'profile'    },
 ]
 
 export default function SideNav() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const user = useAuthStore(s => s.user)
+  const isAdmin = user?.role === 'ROLE_ADMIN'
+  const items = isAdmin
+    ? [...NAV_ITEMS, { path: '/admin', icon: 'admin_panel_settings', key: 'admin' }]
+    : NAV_ITEMS
 
   return (
     <aside className="fixed left-0 top-0 h-full w-20 flex flex-col items-center py-4 z-50
@@ -28,8 +37,8 @@ export default function SideNav() {
 
       {/* Nav */}
       <nav className="flex flex-col items-center flex-1 space-y-6 w-full">
-        {NAV_ITEMS.map(({ path, icon, key }) => {
-          const active = path === '/' ? pathname === '/' : pathname.startsWith(path)
+        {items.map(({ path, icon, key }) => {
+          const active = pathname === path || (path !== '/' && pathname.startsWith(path))
           return (
             <button
               key={path}
@@ -44,7 +53,7 @@ export default function SideNav() {
                 {icon}
               </span>
               <span className="font-['Space_Grotesk'] text-[8px] uppercase tracking-wider font-medium mt-1">
-                {t(`nav.${key}`)}
+                {t(`nav.${key}`, key === 'admin' ? '관리자' : key)}
               </span>
             </button>
           )

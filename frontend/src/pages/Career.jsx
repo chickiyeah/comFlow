@@ -3,10 +3,12 @@ import { useTranslation } from 'react-i18next'
 import Layout from '../components/layout/Layout'
 import { generateRoadmap } from '../api/roadmap'
 import {
-  getActivities, createActivity, updateActivity, deleteActivity,
+  getActivities, getActivitySummary, createActivity, updateActivity, deleteActivity,
   getSavedJobs, saveJob, deleteSavedJob,
   searchJobs, getCertSchedules,
+  searchQualifications, getQualificationDetail, getExamLocations,
 } from '../api/career'
+import { getMyAlerts, createAlert, deleteAlert } from '../api/jobalert'
 
 const CERT_TYPE_STYLE = {
   REQUIRED:    'bg-error-container dark:bg-error/20 text-error border-error/30',
@@ -54,6 +56,7 @@ export default function Career() {
 
   // Activities state
   const [activities, setActivities] = useState([])
+  const [actSummary, setActSummary] = useState({})
   const [actLoading, setActLoading] = useState(false)
   const [showActModal, setShowActModal] = useState(false)
   const [editingAct, setEditingAct] = useState(null)
@@ -72,18 +75,43 @@ export default function Career() {
   // Cert search state
   const [certKeyword, setCertKeyword] = useState('')
   const [certResults, setCertResults] = useState([])
+  const [qualResults, setQualResults] = useState([])
   const [certSearchLoading, setCertSearchLoading] = useState(false)
+  const [selectedQual, setSelectedQual] = useState(null)
+  const [qualDetail, setQualDetail] = useState(null)
+  const [examLocations, setExamLocations] = useState([])
+  const [qualDetailLoading, setQualDetailLoading] = useState(false)
+
+  // 채용 알리미 state
+  const [alerts, setAlerts]           = useState([])
+  const [alertsLoading, setAlertsLoading] = useState(false)
+  const [alertForm, setAlertForm]     = useState({ jobTitle: '', region: '', keyword: '' })
+  const [showAlertForm, setShowAlertForm] = useState(false)
 
   useEffect(() => {
     if (tab === 'activities') loadActivities()
     if (tab === 'jobs') loadSavedJobs()
+    if (tab === 'alerts') loadAlerts()
   }, [tab])
+
+  const loadAlerts = async () => {
+    setAlertsLoading(true)
+    try { const r = await getMyAlerts(); setAlerts(r.data ?? []) }
+    catch { setAlerts([]) }
+    finally { setAlertsLoading(false) }
+  }
+  const handleCreateAlert = async (e) => {
+    e.preventDefault()
+    try { await createAlert(alertForm); setShowAlertForm(false); setAlertForm({ jobTitle:'', region:'', keyword:'' }); loadAlerts() }
+    catch { alert('알리미 등록 실패') }
+  }
 
   const loadActivities = async () => {
     setActLoading(true)
     try {
-      const res = await getActivities()
-      setActivities(res.data.data ?? [])
+      const [res, sumRes] = await Promise.all([getActivities(), getActivitySummary()])
+      setActivities(res.data ?? [])
+      setActSummary(sumRes.data ?? {})
     } catch { /* ignore */ }
     finally { setActLoading(false) }
   }
@@ -91,7 +119,7 @@ export default function Career() {
   const loadSavedJobs = async () => {
     try {
       const res = await getSavedJobs()
-      setSavedJobs(res.data.data ?? [])
+      setSavedJobs(res.data ?? [])
     } catch { /* ignore */ }
   }
 
@@ -161,7 +189,7 @@ export default function Career() {
       if (jobFilters.career) params.career = jobFilters.career
       if (jobFilters.empType) params.empType = jobFilters.empType
       const res = await searchJobs(jobKeyword, 0, params)
-      const data = res.data.data ?? []
+      const data = res.data ?? []
       setJobResults(data)
       setJobTotal(data.length)
     } catch { setJobResults([]) }
@@ -184,24 +212,48 @@ export default function Career() {
     loadSavedJobs()
   }
 
-  // Cert search
+  // Cert search — 시험일정 + 자격증 종목 동시 조회
   const handleCertSearch = async (e) => {
     e.preventDefault()
     setCertSearchLoading(true)
     try {
-      const res = await getCertSchedules(certKeyword || undefined, new Date().getFullYear())
-      setCertResults(res.data.data ?? [])
-    } catch { setCertResults([]) }
+      const [schedRes, qualRes] = await Promise.all([
+        getCertSchedules(certKeyword || undefined, new Date().getFullYear()).catch(() => ({ data: [] })),
+        certKeyword ? searchQualifications(certKeyword).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
+      ])
+      setCertResults(schedRes.data ?? [])
+      setQualResults(qualRes.data ?? [])
+    } catch {
+      setCertResults([]); setQualResults([])
+    }
     finally { setCertSearchLoading(false) }
+  }
+
+  const openQualDetail = async (q) => {
+    setSelectedQual(q)
+    setQualDetail(null)
+    setExamLocations([])
+    setQualDetailLoading(true)
+    try {
+      const [detailRes, locRes] = await Promise.all([
+        getQualificationDetail(q.jmCd, q.qualgbCd).catch(() => ({ data: [] })),
+        getExamLocations().catch(() => ({ data: [] })),
+      ])
+      setQualDetail((detailRes.data ?? [])[0] ?? null)
+      setExamLocations(locRes.data ?? [])
+    } finally {
+      setQualDetailLoading(false)
+    }
   }
 
   const actTypeInfo = (type) => ACTIVITY_TYPES.find(t => t.value === type) ?? ACTIVITY_TYPES[7]
 
   const TABS = [
-    { key: 'roadmap', label: '로드맵', icon: 'route' },
+    { key: 'roadmap',    label: '로드맵',    icon: 'route' },
     { key: 'activities', label: '취업 준비', icon: 'checklist' },
-    { key: 'jobs', label: '채용공고', icon: 'work_outline' },
-    { key: 'certs', label: '자격증 일정', icon: 'workspace_premium' },
+    { key: 'jobs',       label: '채용공고',  icon: 'work_outline' },
+    { key: 'certs',      label: '자격증',    icon: 'workspace_premium' },
+    { key: 'alerts',     label: '채용 알리미', icon: 'notifications_active' },
   ]
 
   return (
@@ -353,6 +405,29 @@ export default function Career() {
       {/* ── Activities Tab ── */}
       {tab === 'activities' && (
         <>
+          {/* 활동 요약 통계 */}
+          {Object.keys(actSummary).length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+              {ACTIVITY_TYPES.filter(t2 => actSummary[t2.label]).map(t2 => (
+                <div key={t2.value} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 p-3 flex items-center gap-3 shadow-sm">
+                  <span className={`material-symbols-outlined text-[22px] ${t2.color}`}>{t2.icon}</span>
+                  <div>
+                    <p className="text-xs text-outline dark:text-slate-400">{t2.label}</p>
+                    <p className="font-black text-xl text-primary dark:text-white font-['Space_Grotesk']">{actSummary[t2.label]}</p>
+                  </div>
+                </div>
+              ))}
+              <div className="bg-secondary-fixed/10 dark:bg-secondary-fixed/10 rounded-xl border border-secondary-fixed/30 p-3 flex items-center gap-3">
+                <span className="material-symbols-outlined text-[22px] text-secondary-fixed">bar_chart</span>
+                <div>
+                  <p className="text-xs text-outline dark:text-slate-400">총 활동</p>
+                  <p className="font-black text-xl text-primary dark:text-white font-['Space_Grotesk']">
+                    {Object.values(actSummary).reduce((a, b) => a + b, 0)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm text-on-surface-variant dark:text-slate-400">취업 준비 활동을 기록하고 관리하세요</p>
             <button
@@ -714,46 +789,264 @@ export default function Career() {
             <p className="text-xs text-on-surface-variant dark:text-slate-500 mt-2">큐넷(Q-Net) API 키 등록 시 국가자격 시험 일정을 실시간으로 조회합니다.</p>
           </div>
 
-          {certResults.length === 0 && !certSearchLoading ? (
+          {certResults.length === 0 && qualResults.length === 0 && !certSearchLoading ? (
             <div className="card p-12 text-center">
               <span className="material-symbols-outlined text-[64px] text-outline dark:text-slate-600 mb-3">workspace_premium</span>
-              <p className="font-bold text-primary dark:text-white">자격증 시험 일정 조회</p>
-              <p className="text-sm text-on-surface-variant dark:text-slate-400 mt-1">검색창에 자격증명을 입력하고 검색하세요</p>
+              <p className="font-bold text-primary dark:text-white">자격증 검색</p>
+              <p className="text-sm text-on-surface-variant dark:text-slate-400 mt-1">검색창에 자격증명을 입력하면 시험일정과 종목 정보를 함께 조회합니다</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {certResults.map((cert, i) => (
-                <div key={i} className="card p-5">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="material-symbols-outlined text-yellow-500">workspace_premium</span>
-                    <div>
-                      <p className="font-bold text-on-surface dark:text-white">{cert.qualification}</p>
-                      <p className="text-xs text-outline dark:text-slate-500">{cert.examName} · {cert.organization}</p>
-                    </div>
+            <div className="space-y-6">
+              {/* 자격증 종목 */}
+              {qualResults.length > 0 && (
+                <div>
+                  <h4 className="font-bold text-primary dark:text-white mb-3 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-secondary-fixed text-[20px]">category</span>
+                    자격증 종목 ({qualResults.length})
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {qualResults.map(q => (
+                      <button key={q.jmCd} onClick={() => openQualDetail(q)}
+                        className="card p-4 text-left hover:shadow-md hover:border-primary/30 dark:hover:border-secondary-fixed/30 transition-all active:scale-[0.98]">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-on-surface dark:text-white truncate">{q.jmNm}</p>
+                            <p className="text-xs text-outline dark:text-slate-500 mt-0.5">{q.qualgbNm} · {q.instiNm}</p>
+                          </div>
+                          <span className="material-symbols-outlined text-outline dark:text-slate-500 text-[18px] shrink-0">chevron_right</span>
+                        </div>
+                      </button>
+                    ))}
                   </div>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div className="bg-surface-container-low dark:bg-slate-800 p-3 rounded-xl">
-                      <p className="text-xs text-outline dark:text-slate-500 mb-1">필기 원서접수</p>
-                      <p className="font-medium text-on-surface dark:text-slate-200">{cert.writtenDate || '-'}</p>
-                    </div>
-                    <div className="bg-surface-container-low dark:bg-slate-800 p-3 rounded-xl">
-                      <p className="text-xs text-outline dark:text-slate-500 mb-1">필기 합격발표</p>
-                      <p className="font-medium text-on-surface dark:text-slate-200">{cert.writtenResultDate || '-'}</p>
-                    </div>
-                    <div className="bg-surface-container-low dark:bg-slate-800 p-3 rounded-xl">
-                      <p className="text-xs text-outline dark:text-slate-500 mb-1">실기 원서접수</p>
-                      <p className="font-medium text-on-surface dark:text-slate-200">{cert.practicalDate || '-'}</p>
-                    </div>
-                    <div className="bg-surface-container-low dark:bg-slate-800 p-3 rounded-xl">
-                      <p className="text-xs text-outline dark:text-slate-500 mb-1">실기 합격발표</p>
-                      <p className="font-medium text-on-surface dark:text-slate-200">{cert.practicalResultDate || '-'}</p>
-                    </div>
+                </div>
+              )}
+
+              {/* 시험 일정 */}
+              {certResults.length > 0 && (
+                <div>
+                  <h4 className="font-bold text-primary dark:text-white mb-3 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-secondary-fixed text-[20px]">event</span>
+                    시험 일정 ({certResults.length})
+                  </h4>
+                  <div className="space-y-4">
+                    {certResults.map((cert, i) => (
+                      <div key={i} className="card p-5">
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="material-symbols-outlined text-yellow-500">workspace_premium</span>
+                          <div>
+                            <p className="font-bold text-on-surface dark:text-white">{cert.qualification}</p>
+                            <p className="text-xs text-outline dark:text-slate-500">{cert.examName} · {cert.organization}</p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div className="bg-surface-container-low dark:bg-slate-800 p-3 rounded-xl">
+                            <p className="text-xs text-outline dark:text-slate-500 mb-1">필기 원서접수</p>
+                            <p className="font-medium text-on-surface dark:text-slate-200">{cert.writtenDate || '-'}</p>
+                          </div>
+                          <div className="bg-surface-container-low dark:bg-slate-800 p-3 rounded-xl">
+                            <p className="text-xs text-outline dark:text-slate-500 mb-1">필기 합격발표</p>
+                            <p className="font-medium text-on-surface dark:text-slate-200">{cert.writtenResultDate || '-'}</p>
+                          </div>
+                          <div className="bg-surface-container-low dark:bg-slate-800 p-3 rounded-xl">
+                            <p className="text-xs text-outline dark:text-slate-500 mb-1">실기 원서접수</p>
+                            <p className="font-medium text-on-surface dark:text-slate-200">{cert.practicalDate || '-'}</p>
+                          </div>
+                          <div className="bg-surface-container-low dark:bg-slate-800 p-3 rounded-xl">
+                            <p className="text-xs text-outline dark:text-slate-500 mb-1">실기 합격발표</p>
+                            <p className="font-medium text-on-surface dark:text-slate-200">{cert.practicalResultDate || '-'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 자격증 상세 모달 */}
+          {selectedQual && (
+            <div className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50 flex items-end sm:items-center justify-center p-4"
+              onClick={e => { if (e.target === e.currentTarget) setSelectedQual(null) }}>
+              <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+                <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between sticky top-0 bg-white dark:bg-slate-900">
+                  <div>
+                    <p className="text-xs text-outline dark:text-slate-500">{selectedQual.qualgbNm} · {selectedQual.instiNm}</p>
+                    <h3 className="font-['Space_Grotesk'] text-lg font-bold text-primary dark:text-white mt-0.5">{selectedQual.jmNm}</h3>
+                  </div>
+                  <button onClick={() => setSelectedQual(null)} className="p-2 rounded-full hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
+                    <span className="material-symbols-outlined text-outline dark:text-slate-400">close</span>
+                  </button>
+                </div>
+
+                <div className="p-6 space-y-4">
+                  {qualDetailLoading ? (
+                    <div className="py-10 text-center text-outline dark:text-slate-500">불러오는 중…</div>
+                  ) : (
+                    <>
+                      {qualDetail ? (
+                        <div className="space-y-3">
+                          {qualDetail.engJmNm && (
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-xs text-outline dark:text-slate-500 min-w-[80px]">영문명</span>
+                              <span className="text-sm text-on-surface dark:text-slate-200">{qualDetail.engJmNm}</span>
+                            </div>
+                          )}
+                          {qualDetail.relatedDept && (
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-xs text-outline dark:text-slate-500 min-w-[80px]">관련 학과</span>
+                              <span className="text-sm text-on-surface dark:text-slate-200">{qualDetail.relatedDept}</span>
+                            </div>
+                          )}
+                          {qualDetail.applyQual && (
+                            <div>
+                              <p className="text-xs text-outline dark:text-slate-500 mb-1">응시자격</p>
+                              <p className="text-sm text-on-surface dark:text-slate-200 bg-surface-container-low dark:bg-slate-800 p-3 rounded-lg whitespace-pre-line">{qualDetail.applyQual}</p>
+                            </div>
+                          )}
+                          {qualDetail.examMethod && (
+                            <div>
+                              <p className="text-xs text-outline dark:text-slate-500 mb-1">검정방법</p>
+                              <p className="text-sm text-on-surface dark:text-slate-200 bg-surface-container-low dark:bg-slate-800 p-3 rounded-lg whitespace-pre-line">{qualDetail.examMethod}</p>
+                            </div>
+                          )}
+                          {qualDetail.passStandard && (
+                            <div>
+                              <p className="text-xs text-outline dark:text-slate-500 mb-1">합격기준</p>
+                              <p className="text-sm text-on-surface dark:text-slate-200 bg-surface-container-low dark:bg-slate-800 p-3 rounded-lg whitespace-pre-line">{qualDetail.passStandard}</p>
+                            </div>
+                          )}
+                          <div className="grid grid-cols-2 gap-3">
+                            {qualDetail.feeWritten && (
+                              <div className="bg-surface-container-low dark:bg-slate-800 p-3 rounded-xl">
+                                <p className="text-xs text-outline dark:text-slate-500 mb-0.5">필기 수수료</p>
+                                <p className="text-sm font-bold text-primary dark:text-secondary-fixed">{qualDetail.feeWritten}</p>
+                              </div>
+                            )}
+                            {qualDetail.feePractical && (
+                              <div className="bg-surface-container-low dark:bg-slate-800 p-3 rounded-xl">
+                                <p className="text-xs text-outline dark:text-slate-500 mb-0.5">실기 수수료</p>
+                                <p className="text-sm font-bold text-primary dark:text-secondary-fixed">{qualDetail.feePractical}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-outline dark:text-slate-500 text-center py-4">상세 정보를 불러올 수 없습니다.</p>
+                      )}
+
+                      {examLocations.length > 0 && (
+                        <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
+                          <p className="text-sm font-bold text-primary dark:text-white mb-2 flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-[18px] text-secondary-fixed">location_on</span>
+                            전국 시험장소 ({examLocations.length})
+                          </p>
+                          <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                            {examLocations.slice(0, 20).map((loc, i) => (
+                              <div key={i} className="bg-surface-container-low dark:bg-slate-800 p-2.5 rounded-lg">
+                                <p className="text-sm font-medium text-on-surface dark:text-slate-200">{loc.placNm} <span className="text-xs text-outline dark:text-slate-500">({loc.brchNm})</span></p>
+                                <p className="text-xs text-outline dark:text-slate-500 mt-0.5">{loc.addr} {loc.telNo && `· ${loc.telNo}`}</p>
+                              </div>
+                            ))}
+                            {examLocations.length > 20 && (
+                              <p className="text-xs text-outline dark:text-slate-500 text-center mt-2">… 외 {examLocations.length - 20}개</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── 채용 알리미 탭 ── */}
+      {tab === 'alerts' && (
+        <div>
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h3 className="font-['Space_Grotesk'] text-lg font-bold text-primary dark:text-white">채용 알리미</h3>
+              <p className="text-sm text-on-surface-variant dark:text-slate-400 mt-1">매일 오전 9시 새 공고를 이메일로 알려드립니다.</p>
+            </div>
+            <button onClick={() => setShowAlertForm(true)}
+              className="btn-primary text-sm flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[18px]">add</span>알리미 추가
+            </button>
+          </div>
+
+          {alertsLoading ? (
+            <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" /></div>
+          ) : alerts.length === 0 ? (
+            <div className="card p-16 text-center">
+              <span className="material-symbols-outlined text-[64px] text-outline dark:text-slate-600">notifications_active</span>
+              <p className="mt-3 font-bold text-primary dark:text-white font-['Space_Grotesk']">등록된 채용 알리미가 없습니다.</p>
+              <p className="text-sm text-on-surface-variant dark:text-slate-400 mt-1">관심 직무를 등록하면 매일 새 채용공고를 이메일로 받아볼 수 있습니다.</p>
+              <button onClick={() => setShowAlertForm(true)} className="btn-primary mt-6 mx-auto">
+                <span className="material-symbols-outlined text-[18px]">add</span>알리미 등록하기
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {alerts.map(a => (
+                <div key={a.id} className="card p-5 group">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-secondary-container/30 dark:bg-secondary-fixed/10 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-primary dark:text-secondary-fixed">notifications_active</span>
+                    </div>
+                    <button onClick={async () => { await deleteAlert(a.id); loadAlerts() }}
+                      className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg bg-error-container dark:bg-error/20 text-error transition-all">
+                      <span className="material-symbols-outlined text-[15px]">delete</span>
+                    </button>
+                  </div>
+                  <h4 className="font-bold text-primary dark:text-white mb-1">{a.jobTitle}</h4>
+                  {a.region && <span className="inline-block text-[11px] px-2 py-0.5 bg-surface-container dark:bg-slate-700 text-outline dark:text-slate-400 rounded mr-1">{a.region}</span>}
+                  {a.keyword && <span className="inline-block text-[11px] px-2 py-0.5 bg-surface-container dark:bg-slate-700 text-outline dark:text-slate-400 rounded">{a.keyword}</span>}
+                  <p className="text-[11px] text-outline dark:text-slate-500 mt-3">매일 09:00 이메일 발송</p>
                 </div>
               ))}
             </div>
           )}
-        </>
+
+          {/* 알리미 등록 모달 */}
+          {showAlertForm && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+              onClick={e => e.target === e.currentTarget && setShowAlertForm(false)}>
+              <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-sm shadow-2xl p-6">
+                <h3 className="font-['Space_Grotesk'] text-lg font-bold text-primary dark:text-white mb-4 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-secondary-fixed">notifications_active</span>채용 알리미 등록
+                </h3>
+                <form onSubmit={handleCreateAlert} className="space-y-4">
+                  <div>
+                    <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">직무명 *</label>
+                    <input required value={alertForm.jobTitle} onChange={e => setAlertForm(p => ({...p, jobTitle: e.target.value}))}
+                      placeholder="예: 백엔드 개발자"
+                      className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                  </div>
+                  <div>
+                    <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">지역</label>
+                    <input value={alertForm.region} onChange={e => setAlertForm(p => ({...p, region: e.target.value}))}
+                      placeholder="예: 서울, 경기"
+                      className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                  </div>
+                  <div>
+                    <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">추가 키워드</label>
+                    <input value={alertForm.keyword} onChange={e => setAlertForm(p => ({...p, keyword: e.target.value}))}
+                      placeholder="예: Spring, React"
+                      className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                  </div>
+                  <div className="flex gap-3 pt-2">
+                    <button type="button" onClick={() => setShowAlertForm(false)}
+                      className="flex-1 py-3 border border-outline-variant dark:border-slate-700 text-on-surface-variant dark:text-slate-300 rounded-xl text-sm font-bold">취소</button>
+                    <button type="submit" className="flex-1 py-3 bg-primary text-white rounded-xl text-sm font-bold">등록</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </Layout>
   )

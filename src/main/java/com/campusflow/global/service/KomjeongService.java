@@ -7,14 +7,18 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 컴정이(10.8.0.2:8000) API 프록시
+ * 컴정이(10.8.0.17:8000) API 프록시
  * 학식 조회, 학과 공지 등 학과 자료 기반 질의에 사용
  */
 @Slf4j
@@ -22,7 +26,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class KomjeongService {
 
-    @Value("${komjeong.url:http://10.8.0.2:8000}")
+    @Value("${komjeong.url:http://10.8.0.17:8000}")
     private String baseUrl;
 
     private final ObjectMapper objectMapper;
@@ -34,17 +38,32 @@ public class KomjeongService {
     }
 
     public String query(String question) {
-        try {
-            String raw = RestClient.create(baseUrl).post()
-                    .uri("/chat")
-                    .header("Content-Type", "application/json")
-                    .body(Map.of(
-                            "query", question,
-                            "session_id", "campusflow_proxy_" + System.currentTimeMillis()
-                    ))
-                    .retrieve()
-                    .body(String.class);
+        return queryWithSession(question, "campusflow_proxy_" + System.currentTimeMillis());
+    }
 
+    public String queryWithSession(String question, String sessionKey) {
+        try {
+            String body = objectMapper.writeValueAsString(Map.of(
+                    "message", question,
+                    "session_id", sessionKey
+            ));
+
+            // RestClient body=null 버그 회피 — HttpClient + HTTP/1.1 강제 (uvicorn HTTP/2 미지원)
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create(baseUrl + "/chat"))
+                    .version(HttpClient.Version.HTTP_1_1)
+                    .header("Content-Type", "application/json; charset=UTF-8")
+                    .header("Accept", "application/json, text/plain, */*")
+                    .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
+                    .build();
+
+            HttpResponse<byte[]> resp = HttpClient.newBuilder()
+                    .version(HttpClient.Version.HTTP_1_1)
+                    .build()
+                    .send(req, HttpResponse.BodyHandlers.ofByteArray());
+
+            String raw = resp.body() == null ? "" : new String(resp.body(), StandardCharsets.UTF_8);
+            log.info("[컴정이] status={} chars={}", resp.statusCode(), raw.length());
             return parseResponse(raw);
         } catch (Exception e) {
             log.warn("컴정이 API 호출 실패: {}", e.getMessage());

@@ -42,10 +42,10 @@ public class WorknetService {
                     .queryParam("keyword", keyword)
                     .build(false).encode().toUriString();
 
-            String xml = RestClient.create().get()
+            byte[] xml = RestClient.create().get()
                     .uri(uri)
                     .retrieve()
-                    .body(String.class);
+                    .body(byte[].class);
 
             return parseWorknetXml(xml);
         } catch (Exception e) {
@@ -54,12 +54,12 @@ public class WorknetService {
         }
     }
 
-    private List<JobSearchResult> parseWorknetXml(String xml) throws Exception {
+    private List<JobSearchResult> parseWorknetXml(byte[] xml) throws Exception {
         List<JobSearchResult> results = new ArrayList<>();
-        if (xml == null || xml.isBlank()) return results;
+        if (xml == null || xml.length == 0) return results;
 
         Document doc = DocumentBuilderFactory.newInstance().newDocumentBuilder()
-                .parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
+                .parse(new ByteArrayInputStream(xml));
         NodeList items = doc.getElementsByTagName("wanted");
 
         for (int i = 0; i < items.getLength(); i++) {

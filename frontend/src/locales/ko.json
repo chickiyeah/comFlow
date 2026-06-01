@@ -4,7 +4,10 @@
     "academic": "학사",
     "facilities": "시설",
     "career": "진로",
-    "technical": "포트폴리오"
+    "technical": "포트폴리오",
+    "calendar": "캘린더",
+    "study": "스터디",
+    "profile": "설정"
   },
   "common": {
     "save": "저장",

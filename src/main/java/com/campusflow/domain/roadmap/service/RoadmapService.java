@@ -1,7 +1,7 @@
 package com.campusflow.domain.roadmap.service;
 
 import com.campusflow.domain.ai.service.AiFacadeService;
-import com.campusflow.domain.ai.service.ChromaDbService;
+import com.campusflow.domain.ai.service.KomjeongRagService;
 import com.campusflow.domain.roadmap.dto.RoadmapRequest;
 import com.campusflow.domain.roadmap.dto.RoadmapResponse;
 import com.campusflow.global.exception.BusinessException;
@@ -19,7 +19,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class RoadmapService {
 
-    private final ChromaDbService chromaDbService;
+    private final KomjeongRagService komjeongRagService;
     private final AiFacadeService aiFacadeService;
     private final ObjectMapper objectMapper;
 
@@ -58,18 +58,27 @@ public class RoadmapService {
         if (request.useExternalAi()) {
             systemPrompt = EXTERNAL_SYSTEM_PROMPT;
         } else {
-            List<String> docs = chromaDbService.searchRelevantDocs(request.jobTitle(), 5);
-            String context = String.join("\n\n", docs);
-            systemPrompt = INTERNAL_SYSTEM_PROMPT + "\n\n[학과 자료]\n" + context;
+            String ragQuery = request.jobTitle()
+                    + "가 되려면 어떤 자격증이 필요하고 학기별로 어떻게 공부해야 하나요?";
+            String context = komjeongRagService.retrieveContext(ragQuery);
+            // 학과 자료(RAG)가 있으면 근거 기반, 없으면 일반 지식 로드맵으로 폴백 (빈 결과 방지)
+            systemPrompt = context.isBlank()
+                    ? EXTERNAL_SYSTEM_PROMPT
+                    : INTERNAL_SYSTEM_PROMPT + "\n\n[학과 자료]\n" + context;
         }
 
         String rawJson = aiFacadeService.ask(systemPrompt, userMessage);
 
         try {
-            // JSON 블록 추출 (마크다운 코드블록 처리)
+            // JSON 블록 추출 (마크다운 코드블록 + 설명 산문 혼입 대응)
             String json = rawJson.trim();
             if (json.startsWith("```")) {
                 json = json.replaceAll("```json?\\s*", "").replaceAll("```\\s*$", "").trim();
+            }
+            int objStart = json.indexOf('{');
+            int objEnd = json.lastIndexOf('}');
+            if (objStart >= 0 && objEnd > objStart) {
+                json = json.substring(objStart, objEnd + 1);
             }
 
             Map<String, Object> parsed = objectMapper.readValue(json, new TypeReference<>() {});

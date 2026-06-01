@@ -72,22 +72,35 @@ public class PortalDataService {
     public Map<String, Object> fetchAttendanceCombined(
             String username, String schoolPassword, String year, String term) {
         Student s = getStudent(username);
-        // 비밀번호는 요청에만 사용, 저장 안 함
+        // 전달된 비밀번호 없으면 저장된 비밀번호 사용
+        String pw = (schoolPassword != null && !schoolPassword.isBlank())
+                ? schoolPassword : s.getPortalPassword();
+        if (pw == null || pw.isBlank()) {
+            throw new com.campusflow.global.exception.BusinessException(
+                    com.campusflow.global.exception.ErrorCode.STUDENT_NOT_FOUND);
+        }
+        final String schoolPassword2 = pw;
         try {
             Object cookies = objectMapper.readValue(s.getPortalSessionCookies(), Object.class);
             Map<String, Object> body = new HashMap<>();
             body.put("user_id",       s.getStudentId());
-            body.put("user_pw",       schoolPassword);
+            body.put("user_pw",       schoolPassword2);
             body.put("session_cookies", cookies);
             body.put("year", year);
             body.put("term", term);
 
-            String raw = RestClient.create(intranetUrl).post()
-                    .uri("/api/attendance/combined")
+            String bodyAttJson = objectMapper.writeValueAsString(body);
+            java.net.http.HttpRequest attReq = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create(intranetUrl + "/api/attendance/combined"))
+                    .version(java.net.http.HttpClient.Version.HTTP_1_1)
                     .header("Content-Type", "application/json")
-                    .body(body)
-                    .retrieve()
-                    .body(String.class);
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(bodyAttJson))
+                    .build();
+            String raw = java.net.http.HttpClient.newBuilder()
+                    .version(java.net.http.HttpClient.Version.HTTP_1_1)
+                    .build()
+                    .send(attReq, java.net.http.HttpResponse.BodyHandlers.ofString())
+                    .body();
 
             JsonNode root = objectMapper.readTree(raw);
             return objectMapper.convertValue(root, new TypeReference<Map<String, Object>>() {});
@@ -149,12 +162,18 @@ public class PortalDataService {
             body.putAll(extra.entrySet().stream()
                     .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
 
-            return RestClient.create(intranetUrl).post()
-                    .uri(path)
+            String bodyJson = objectMapper.writeValueAsString(body);
+            java.net.http.HttpRequest req = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create(intranetUrl + path))
+                    .version(java.net.http.HttpClient.Version.HTTP_1_1)
                     .header("Content-Type", "application/json")
-                    .body(body)
-                    .retrieve()
-                    .body(String.class);
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(bodyJson))
+                    .build();
+            return java.net.http.HttpClient.newBuilder()
+                    .version(java.net.http.HttpClient.Version.HTTP_1_1)
+                    .build()
+                    .send(req, java.net.http.HttpResponse.BodyHandlers.ofString())
+                    .body();
         } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {

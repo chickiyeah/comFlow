@@ -23,7 +23,7 @@ export default function Login() {
     try {
       const res = await login(form)
       setAuth(res.data.accessToken, { name: res.data.name, role: res.data.role })
-      navigate('/')
+      navigate('/dashboard')
     } catch (err) {
       setError(err?.message || t('auth.loginFailed'))
     } finally {

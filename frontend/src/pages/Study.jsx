@@ -22,8 +22,8 @@ export default function Study() {
     setLoading(true)
     try {
       const [all, my] = await Promise.all([searchStudyGroups(search || undefined), getMyStudyGroups()])
-      setGroups(all.data.data || [])
-      setMyGroups(my.data.data || [])
+      setGroups(all.data || [])
+      setMyGroups(my.data || [])
     } finally { setLoading(false) }
   }
 

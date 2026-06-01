@@ -1,7 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import Layout from '../components/layout/Layout'
 import { searchBooks } from '../api/library'
+import { getPortalShuttle } from '../api/portal'
+import { getFacilityStats } from '../api/facilities'
+import { getProfile } from '../api/profile'
+
+const BOOK_CATEGORIES = ['IT/컴퓨터', '수학/통계', '영어', '취업/자격증', '교양', '소설']
 
 const AMENITIES = [
   { icon: 'fitness_center', label: '피트니스'  },
@@ -12,22 +17,45 @@ const AMENITIES = [
   { icon: 'sports_soccer',  label: '체육관'    },
 ]
 
-const SHUTTLE = [
-  { route: 'A노선 (공대 ↔ 중앙도서관)', eta: '3분 전',  active: true  },
-  { route: 'B노선 (기숙사 행)',          eta: '10분 후', active: false },
-  { route: 'C노선 (역전 셔틀)',          eta: '15분 후', active: false },
-]
-
-const BOOK_CATEGORIES = ['IT/컴퓨터', '수학/통계', '영어', '취업/자격증', '교양', '소설']
-
 export default function Facilities() {
   const { t } = useTranslation()
   const [facTab, setFacTab] = useState('campus')
+
+  // 도서 검색
   const [bookKeyword, setBookKeyword] = useState('')
   const [bookCategory, setBookCategory] = useState('')
-  const [books, setBooks] = useState([])
+  const [books, setBooks]       = useState([])
   const [bookLoading, setBookLoading] = useState(false)
   const [searched, setSearched] = useState(false)
+
+  // 통학버스
+  const [shuttleData, setShuttleData]       = useState(null)
+  const [shuttleLoading, setShuttleLoading] = useState(false)
+  const [shuttleError, setShuttleError]     = useState(false)
+  const [portalSynced, setPortalSynced]     = useState(false)
+
+  // 시설 통계
+  const [stats, setStats] = useState({})
+  const [statsLoading, setStatsLoading] = useState(true)
+
+  useEffect(() => {
+    setShuttleLoading(true)
+    getPortalShuttle()
+      .then(r => setShuttleData(r.data))
+      .catch(() => setShuttleError(true))
+      .finally(() => setShuttleLoading(false))
+
+    getProfile().then(r => { if (r.data?.intranetSyncEnabled) setPortalSynced(true) }).catch(() => {})
+
+    getFacilityStats()
+      .then(r => {
+        const map = {}
+        ;(r.data || []).forEach(s => { map[s.statKey] = s })
+        setStats(map)
+      })
+      .catch(() => {})
+      .finally(() => setStatsLoading(false))
+  }, [])
 
   const handleBookSearch = async (e) => {
     e.preventDefault()
@@ -43,10 +71,18 @@ export default function Facilities() {
     }
   }
 
+  const sv = (key, fallback = '—') => stats[key]?.value ?? fallback
+  const su = (key) => stats[key]?.unit ?? ''
+
+  const libAvail = parseInt(sv('library_available', '0'), 10)
+  const libTotal = parseInt(sv('library_total', '120'), 10)
+  const libPct   = libTotal > 0 ? Math.round((libAvail / libTotal) * 100) : 0
+
   const FAC_TABS = [
-    { key: 'campus', label: t('facilities.tab_shuttle') + ' · ' + t('facilities.tab_dorm') },
+    { key: 'campus', label: '캠퍼스 · 기숙사' },
     { key: 'books',  label: t('facilities.tab_books') },
   ]
+
   return (
     <Layout title={t('facilities.title')}>
       <div className="mb-6">
@@ -54,17 +90,19 @@ export default function Facilities() {
         <p className="text-on-surface-variant dark:text-slate-400 text-sm mt-1">{t('facilities.subtitle')}</p>
       </div>
 
-      {/* Tab switcher */}
+      {/* 탭 */}
       <div className="flex gap-1 p-1 bg-surface-container dark:bg-slate-800 rounded-2xl w-fit mb-6">
         {FAC_TABS.map(t2 => (
           <button key={t2.key} onClick={() => setFacTab(t2.key)}
             className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
-              facTab === t2.key ? 'bg-white dark:bg-slate-900 text-primary dark:text-white shadow-sm' : 'text-on-surface-variant dark:text-slate-400 hover:text-primary dark:hover:text-white'
+              facTab === t2.key
+                ? 'bg-white dark:bg-slate-900 text-primary dark:text-white shadow-sm'
+                : 'text-on-surface-variant dark:text-slate-400 hover:text-primary dark:hover:text-white'
             }`}>{t2.label}</button>
         ))}
       </div>
 
-      {/* Book search tab */}
+      {/* ── 도서 검색 탭 ── */}
       {facTab === 'books' && (
         <div>
           <form onSubmit={handleBookSearch} className="card p-5 mb-6 flex flex-col sm:flex-row gap-3">
@@ -84,14 +122,12 @@ export default function Facilities() {
           </form>
 
           {bookLoading && <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin"/></div>}
-
           {!bookLoading && searched && books.length === 0 && (
             <div className="card p-12 text-center">
               <span className="material-symbols-outlined text-[56px] text-outline dark:text-slate-600">menu_book</span>
               <p className="mt-3 font-bold text-primary dark:text-white">검색 결과가 없습니다.</p>
             </div>
           )}
-
           {!bookLoading && books.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {books.map(b => (
@@ -113,7 +149,6 @@ export default function Facilities() {
               ))}
             </div>
           )}
-
           {!searched && (
             <div className="card p-16 text-center">
               <span className="material-symbols-outlined text-[64px] text-outline dark:text-slate-600">local_library</span>
@@ -124,140 +159,189 @@ export default function Facilities() {
         </div>
       )}
 
-      {facTab === 'campus' && <div className="grid grid-cols-1 lg:grid-cols-3 gap-card_gap">
+      {/* ── 캠퍼스·기숙사 탭 ── */}
+      {facTab === 'campus' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-card_gap">
 
-        {/* Shuttle */}
-        <div className="lg:col-span-2 card p-6">
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="font-['Space_Grotesk'] text-lg font-semibold text-primary dark:text-white flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-secondary-container dark:bg-secondary-fixed/20 flex items-center justify-center">
-                <span className="material-symbols-outlined text-primary dark:text-secondary-fixed text-[20px]">directions_bus</span>
-              </div>
-              셔틀버스 안내
-            </h3>
-            <span className="px-2 py-1 bg-secondary-container dark:bg-secondary-fixed/20 text-on-secondary-container dark:text-secondary-fixed text-[10px] font-bold rounded-full">실시간</span>
-          </div>
-
-          <div className="bg-surface-container-low dark:bg-slate-800 rounded-xl p-4 mb-4">
-            <div className="flex justify-between items-center mb-3">
-              <div>
-                <p className="text-label-md text-outline dark:text-slate-400">현재 운행 노선</p>
-                <p className="font-bold text-primary dark:text-white">A노선: 공대 ↔ 중앙도서관</p>
-              </div>
-              <div className="text-right">
-                <p className="text-label-md text-outline dark:text-slate-400">도착 예정</p>
-                <p className="font-black text-error">3분 전</p>
-              </div>
-            </div>
-            <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full">
-              <div className="h-full bg-primary dark:bg-primary-container rounded-full w-[70%] transition-all" />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            {SHUTTLE.map((s, i) => (
-              <div key={i} className="flex items-center justify-between p-3 border-b border-slate-100 dark:border-slate-800 last:border-0">
-                <span className={`text-sm font-medium ${s.active ? 'text-primary dark:text-secondary-fixed' : 'text-on-surface dark:text-slate-300'}`}>{s.route}</span>
-                <span className={`text-sm ${s.active ? 'text-error font-bold' : 'text-outline dark:text-slate-400'}`}>{s.eta}</span>
-              </div>
-            ))}
-          </div>
-
-          <button className="w-full mt-4 py-3 bg-primary dark:bg-primary-container text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-transform">
-            <span className="material-symbols-outlined text-[18px]">edit_calendar</span>정기권 신청하기
-          </button>
-        </div>
-
-        {/* Library seats */}
-        <div className="card p-6 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-3 mb-4">
-              <span className="material-symbols-outlined text-primary dark:text-secondary-fixed p-2 bg-secondary-container/30 dark:bg-secondary-fixed/10 rounded-lg">auto_stories</span>
-              <h3 className="font-['Space_Grotesk'] text-lg font-semibold text-primary dark:text-white">도서관 실시간 좌석</h3>
-            </div>
-            <div className="flex items-baseline gap-2 mb-2">
-              <span className="text-4xl font-black text-primary dark:text-secondary-fixed font-['Space_Grotesk']">45</span>
-              <span className="text-on-surface-variant dark:text-slate-400">/ 120석</span>
-            </div>
-            <div className="w-full bg-surface-container dark:bg-slate-700 rounded-full h-3 mb-4">
-              <div className="h-full bg-secondary dark:bg-secondary-fixed rounded-full" style={{ width: '37.5%' }} />
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              {[['1층 열람실', '12석'], ['2층 스터디룸', '8석'], ['3층 그룹실', '15석'], ['디지털 열람실', '10석']].map(([n, v]) => (
-                <div key={n} className="bg-surface-container-low dark:bg-slate-800 p-2 rounded-lg">
-                  <p className="text-label-md text-outline dark:text-slate-400">{n}</p>
-                  <p className="font-bold text-primary dark:text-white">{v}</p>
+          {/* 통학버스 */}
+          <div className="lg:col-span-2 card p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-['Space_Grotesk'] text-lg font-semibold text-primary dark:text-white flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-secondary-container dark:bg-secondary-fixed/20 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-primary dark:text-secondary-fixed text-[20px]">directions_bus</span>
                 </div>
+                통학버스 안내
+              </h3>
+              <span className="px-2 py-1 bg-secondary-container dark:bg-secondary-fixed/20 text-on-secondary-container dark:text-secondary-fixed text-[10px] font-bold rounded-full">포털 연동</span>
+            </div>
+
+            {shuttleLoading && <div className="flex justify-center py-8"><div className="w-6 h-6 border-4 border-primary/20 border-t-primary rounded-full animate-spin" /></div>}
+            {!shuttleLoading && shuttleError && (
+              <div className="text-center py-8 text-on-surface-variant dark:text-slate-400 text-sm">
+                <span className="material-symbols-outlined text-[40px] block mb-2 text-outline dark:text-slate-600">directions_bus</span>
+                {portalSynced
+                  ? <><p className="font-bold text-primary dark:text-white text-base mb-1">포털 세션이 만료되었습니다</p><p>프로필 → <strong>지금 다시 동기화</strong>를 눌러주세요.</p></>
+                  : <p>포털 연동 후 실시간 버스 정보를 확인할 수 있습니다.</p>
+                }
+              </div>
+            )}
+            {!shuttleLoading && shuttleData && (() => {
+              const routes = shuttleData.ds_out_1 ?? []
+              const stops  = shuttleData.ds_out_2 ?? []
+              const times  = shuttleData.ds_out_3 ?? []
+              return (
+                <div>
+                  {routes.length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-label-md text-outline dark:text-slate-400 mb-2">운행 노선</p>
+                      <div className="space-y-2">
+                        {routes.map((r, i) => (
+                          <div key={i} className="flex items-center justify-between p-3 bg-surface-container-low dark:bg-slate-800 rounded-xl">
+                            <span className="font-bold text-primary dark:text-white text-sm">{r.bus_route_nm ?? r.nm ?? `노선 ${i+1}`}</span>
+                            <span className={`text-label-md font-bold ${r.oper_yn === 'Y' ? 'text-green-600 dark:text-green-400' : 'text-outline dark:text-slate-500'}`}>
+                              {r.oper_yn === 'Y' ? '운행중' : '미운행'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {stops.length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-label-md text-outline dark:text-slate-400 mb-2">정류장 ({stops.length}개)</p>
+                      <div className="flex gap-2 overflow-x-auto pb-1">
+                        {stops.map((s, i) => (
+                          <span key={i} className="shrink-0 px-3 py-1 bg-surface-container dark:bg-slate-700 text-on-surface dark:text-slate-300 rounded-full text-xs">
+                            {s.stop_nm ?? s.nm ?? `정류장${i+1}`}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {times.length > 0 && (
+                    <div>
+                      <p className="text-label-md text-outline dark:text-slate-400 mb-2">운행 시간표</p>
+                      <div className="flex gap-2 flex-wrap">
+                        {times.slice(0,12).map((t2, i) => (
+                          <span key={i} className="px-3 py-1.5 bg-secondary-container/30 dark:bg-secondary-fixed/10 text-on-secondary-container dark:text-secondary-fixed rounded-lg text-sm font-bold">
+                            {t2.dep_tm ? t2.dep_tm.slice(0,5) : t2.tm ?? '?'}
+                          </span>
+                        ))}
+                        {times.length > 12 && <span className="px-3 py-1.5 text-outline dark:text-slate-400 text-sm">+{times.length-12}개</span>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+          </div>
+
+          {/* 도서관 좌석 — API 연동 */}
+          <div className="card p-6 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <span className="material-symbols-outlined text-primary dark:text-secondary-fixed p-2 bg-secondary-container/30 dark:bg-secondary-fixed/10 rounded-lg">auto_stories</span>
+                <h3 className="font-['Space_Grotesk'] text-lg font-semibold text-primary dark:text-white">도서관 좌석 현황</h3>
+              </div>
+              {statsLoading ? (
+                <div className="flex justify-center py-6"><div className="w-5 h-5 border-4 border-primary/20 border-t-primary rounded-full animate-spin" /></div>
+              ) : (
+                <>
+                  <div className="flex items-baseline gap-2 mb-2">
+                    <span className="text-4xl font-black text-primary dark:text-secondary-fixed font-['Space_Grotesk']">{sv('library_available')}</span>
+                    <span className="text-on-surface-variant dark:text-slate-400">/ {sv('library_total')}{su('library_total')}</span>
+                  </div>
+                  <div className="w-full bg-surface-container dark:bg-slate-700 rounded-full h-3 mb-4">
+                    <div className="h-full bg-secondary dark:bg-secondary-fixed rounded-full transition-all" style={{ width: `${libPct}%` }} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    {[
+                      ['library_1f','library_2f'],
+                      ['library_3f','library_digital']
+                    ].flat().map(key => stats[key] && (
+                      <div key={key} className="bg-surface-container-low dark:bg-slate-800 p-2 rounded-lg">
+                        <p className="text-label-md text-outline dark:text-slate-400">{stats[key].label}</p>
+                        <p className="font-bold text-primary dark:text-white">{stats[key].value}{stats[key].unit}</p>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+            <p className="text-[10px] text-outline dark:text-slate-500 mt-4 text-center">관리자가 수시로 업데이트하는 현황입니다</p>
+          </div>
+
+          {/* 기숙사 안내 */}
+          <div className="lg:col-span-2 card p-6">
+            <h3 className="font-['Space_Grotesk'] text-lg font-semibold text-primary dark:text-white mb-4 flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary dark:text-secondary-fixed p-2 bg-secondary-container/30 dark:bg-secondary-fixed/10 rounded-lg text-[20px]">apartment</span>
+              기숙사 안내
+            </h3>
+            {statsLoading ? (
+              <div className="flex justify-center py-6"><div className="w-5 h-5 border-4 border-primary/20 border-t-primary rounded-full animate-spin" /></div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 bg-surface-container-low dark:bg-slate-800 rounded-xl">
+                  <span className="material-symbols-outlined text-primary dark:text-secondary-fixed">apartment</span>
+                  <div>
+                    <p className="text-xs text-outline dark:text-slate-400">건물명</p>
+                    <p className="font-bold text-primary dark:text-white">{sv('dorm_building', 'IT관')}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-surface-container-low dark:bg-slate-800 rounded-xl">
+                  <span className="material-symbols-outlined text-primary dark:text-secondary-fixed">campaign</span>
+                  <div>
+                    <p className="text-xs text-outline dark:text-slate-400">공지</p>
+                    <p className="font-bold text-primary dark:text-white">{sv('dorm_notice', '정상 운영 중')}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl text-sm text-blue-700 dark:text-blue-300">
+                  <span className="material-symbols-outlined text-[18px]">info</span>
+                  실시간 IoT 연동 준비 중입니다. 상세 현황은 기숙사 관리실에 문의하세요.
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 주요 편의시설 */}
+          <div className="card p-6">
+            <h3 className="font-bold text-primary dark:text-white mb-4 flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary dark:text-secondary-fixed">map</span>주요 편의시설
+            </h3>
+            <div className="grid grid-cols-3 gap-3">
+              {AMENITIES.map(a => (
+                <button key={a.label} className="flex flex-col items-center gap-2 p-3 rounded-xl bg-surface-container-low dark:bg-slate-800 hover:bg-secondary-container/20 dark:hover:bg-secondary-fixed/10 active:scale-95 transition-all">
+                  <div className="w-12 h-12 rounded-full bg-white dark:bg-slate-900 flex items-center justify-center shadow-sm border border-slate-100 dark:border-slate-700">
+                    <span className="material-symbols-outlined text-primary dark:text-secondary-fixed">{a.icon}</span>
+                  </div>
+                  <span className="text-[11px] font-medium text-on-surface dark:text-slate-300">{a.label}</span>
+                </button>
               ))}
             </div>
           </div>
-          <button className="w-full mt-4 py-2.5 border border-outline dark:border-slate-700 text-on-surface-variant dark:text-slate-300 rounded-xl text-label-md hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
-            좌석 예약하기
-          </button>
-        </div>
 
-        {/* Dormitory */}
-        <div className="lg:col-span-2 card overflow-hidden">
-          <div className="relative h-36">
-            <img
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuAtWWxBVdCgiNNAYClnuqLNlkpEuYfNwSrmGuDF5iu-6vmy6Tl05wcn7tlHcHJFdEK8hwkr9D3M8FLcs-rg8gX8eyRWY1Lpf-zfjDuXNh6esyMFo6vclnsAJJQDgmjSHYngh0YFY-KbU3vPJpFOxi3XsltUDIutW3_ky-7cs5DB2DwPZr5sl3TxLizX6d7WJ7kMz-S3-hJYpeoHa2zWYYrfDxtVOlV5nikPLqtQmKr5-8ab9sJLC2biMejYyA83SXbM16v1Zg91qK8"
-              alt="기숙사" className="w-full h-full object-cover dark:opacity-60"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">
-              <div>
-                <h3 className="text-white font-['Space_Grotesk'] text-lg font-semibold">IT관 기숙사</h3>
-                <p className="text-secondary-fixed text-sm">302호 · 거주 중</p>
-              </div>
-            </div>
-          </div>
-          <div className="p-5 grid grid-cols-3 gap-3">
-            {[
-              { icon: 'thermostat', label: '실내 온도', val: '24.5°C' },
-              { icon: 'lightbulb',  label: '조명 상태', val: '자동'  },
-              { icon: 'encrypted', label: '보안 등급',  val: 'S+'    },
-            ].map(s => (
-              <div key={s.label} className="p-3 rounded-xl bg-surface-container-low dark:bg-slate-800 text-center">
-                <span className="material-symbols-outlined text-primary dark:text-secondary-fixed">{s.icon}</span>
-                <p className="text-[10px] text-outline dark:text-slate-400 mt-1">{s.label}</p>
-                <p className="font-bold text-primary dark:text-white">{s.val}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Amenities */}
-        <div className="card p-6">
-          <h3 className="font-bold text-primary dark:text-white mb-4 flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary dark:text-secondary-fixed">map</span>주요 편의시설
-          </h3>
-          <div className="grid grid-cols-3 gap-3">
-            {AMENITIES.map(a => (
-              <button key={a.label} className="flex flex-col items-center gap-2 p-3 rounded-xl bg-surface-container-low dark:bg-slate-800 hover:bg-secondary-container/20 dark:hover:bg-secondary-fixed/10 active:scale-95 transition-all">
-                <div className="w-12 h-12 rounded-full bg-white dark:bg-slate-900 flex items-center justify-center shadow-sm border border-slate-100 dark:border-slate-700">
-                  <span className="material-symbols-outlined text-primary dark:text-secondary-fixed">{a.icon}</span>
-                </div>
-                <span className="text-[11px] font-medium text-on-surface dark:text-slate-300">{a.label}</span>
+          {/* 빠른 현황 카드 — API 연동 */}
+          <div className="lg:col-span-3 grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {statsLoading ? (
+              <div className="col-span-4 flex justify-center py-6"><div className="w-6 h-6 border-4 border-primary/20 border-t-primary rounded-full animate-spin" /></div>
+            ) : [
+              { key: 'studyroom_available', icon: 'meeting_room',  label: '스터디룸 예약 가능', color: 'bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800' },
+              { key: null,                  icon: 'construction',  label: '시설 수리 요청',      sub: '빠른 접수 가능', color: 'bg-secondary-container dark:bg-secondary-fixed/10 border border-secondary-fixed/30' },
+              { key: 'locker_arrived',      icon: 'package_2',     label: '택배 보관함 도착',   color: 'bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800' },
+              { key: 'parking_available',   icon: 'local_parking', label: '주차장 잔여',         color: 'bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800' },
+            ].map((c, i) => (
+              <button key={i} className={`p-5 rounded-2xl ${c.color} flex flex-col items-center justify-center gap-2 active:scale-95 transition-transform shadow-sm`}>
+                <span className="material-symbols-outlined text-3xl text-primary dark:text-secondary-fixed">{c.icon}</span>
+                <span className="font-bold text-sm text-primary dark:text-white">{c.label}</span>
+                <span className="text-label-md text-outline dark:text-slate-400">
+                  {c.key ? `${sv(c.key)}${su(c.key)}` : c.sub}
+                </span>
               </button>
             ))}
           </div>
-        </div>
 
-        {/* Study room + repair */}
-        <div className="lg:col-span-3 grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { icon: 'meeting_room',   label: '스터디룸 예약',  sub: '예약 가능: 12개', color: 'bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800' },
-            { icon: 'construction',   label: '시설 수리 요청', sub: '빠른 접수 가능',   color: 'bg-secondary-container dark:bg-secondary-fixed/10 border border-secondary-fixed/30' },
-            { icon: 'package_2',      label: '택배 보관함',    sub: '현재 3개 도착',    color: 'bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800' },
-            { icon: 'local_parking',  label: '주차 현황',      sub: '잔여 42대',        color: 'bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800' },
-          ].map(c => (
-            <button key={c.label} className={`p-5 rounded-2xl ${c.color} flex flex-col items-center justify-center gap-2 active:scale-95 transition-transform shadow-sm`}>
-              <span className="material-symbols-outlined text-3xl text-primary dark:text-secondary-fixed">{c.icon}</span>
-              <span className="font-bold text-sm text-primary dark:text-white">{c.label}</span>
-              <span className="text-label-md text-outline dark:text-slate-400">{c.sub}</span>
-            </button>
-          ))}
         </div>
-      </div>}
+      )}
     </Layout>
   )
 }

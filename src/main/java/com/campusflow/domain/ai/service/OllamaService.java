@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -43,16 +44,18 @@ public class OllamaService {
         for (int i = 0; i < servers.size(); i++) {
             String server = servers.get((start + i) % servers.size());
             try {
+                log.info("[Ollama] trying {}", server);
                 String result = callOllama(server, systemPrompt, userMessage);
                 if (!result.isBlank()) {
-                    log.debug("Ollama 응답 성공: {}", server);
+                    log.info("[Ollama] success: {}", server);
                     return result;
                 }
+                log.warn("[Ollama] blank response from {}", server);
             } catch (Exception e) {
-                log.warn("Ollama {} 실패, 다음 서버 시도: {}", server, e.getMessage());
+                log.warn("[Ollama] FAIL {} : {} - {}", server, e.getClass().getSimpleName(), e.getMessage());
             }
         }
-        throw new RuntimeException("모든 Ollama 서버 응답 실패");
+        throw new RuntimeException("All Ollama servers failed");
     }
 
     private String callOllama(String serverUrl, String systemPrompt, String userMessage) throws Exception {
@@ -66,7 +69,12 @@ public class OllamaService {
                 )
         );
 
-        String raw = RestClient.create(serverUrl).post()
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5000);   // 연결 타임아웃 5초 (다운 서버 빠른 건너뛰기)
+        factory.setReadTimeout(180000);    // 응답 타임아웃 3분 (LLM 생성 대기)
+
+        String raw = RestClient.builder().requestFactory(factory).baseUrl(serverUrl).build()
+                .post()
                 .uri(PATH)
                 .header("Content-Type", "application/json")
                 .body(body)

@@ -4,7 +4,10 @@
     "academic": "Học vụ",
     "facilities": "Cơ sở",
     "career": "Nghề nghiệp",
-    "technical": "Portfolio"
+    "technical": "Portfolio",
+    "calendar": "Lịch",
+    "study": "Học nhóm",
+    "profile": "Cài đặt"
   },
   "common": {
     "save": "Lưu",

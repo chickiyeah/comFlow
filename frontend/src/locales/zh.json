@@ -4,7 +4,10 @@
     "academic": "学业",
     "facilities": "设施",
     "career": "职业",
-    "technical": "作品集"
+    "technical": "作品集",
+    "calendar": "日历",
+    "study": "学习组",
+    "profile": "设置"
   },
   "common": {
     "save": "保存",

@@ -38,7 +38,7 @@ public class QNetService {
                     .queryParam("pageNo", 1)
                     .queryParam("numOfRows", 100)
                     .build(false).encode().toUriString();
-            String xml = RestClient.create().get().uri(uri).retrieve().body(String.class);
+            byte[] xml = RestClient.create().get().uri(uri).retrieve().body(byte[].class);
             return parseSchedules(xml, keyword);
         } catch (Exception e) {
             log.error("QNet 시험일정 조회 실패: {}", e.getMessage());
@@ -55,7 +55,7 @@ public class QNetService {
                     .queryParam("pageNo", 1)
                     .queryParam("numOfRows", 100)
                     .build(false).encode().toUriString();
-            String xml = RestClient.create().get().uri(uri).retrieve().body(String.class);
+            byte[] xml = RestClient.create().get().uri(uri).retrieve().body(byte[].class);
             return parseQualificationList(xml, keyword);
         } catch (Exception e) {
             log.error("QNet 종목목록 조회 실패: {}", e.getMessage());
@@ -73,7 +73,7 @@ public class QNetService {
                     .queryParam("numOfRows", 10);
             if (jmCd != null && !jmCd.isBlank()) builder.queryParam("jmCd", jmCd);
             if (qualgbCd != null && !qualgbCd.isBlank()) builder.queryParam("qualgbCd", qualgbCd);
-            String xml = RestClient.create().get().uri(builder.build(false).encode().toUriString()).retrieve().body(String.class);
+            byte[] xml = RestClient.create().get().uri(builder.build(false).encode().toUriString()).retrieve().body(byte[].class);
             return parseQualificationDetail(xml);
         } catch (Exception e) {
             log.error("QNet 자격정보 조회 실패: {}", e.getMessage());
@@ -90,7 +90,7 @@ public class QNetService {
                     .queryParam("pageNo", 1)
                     .queryParam("numOfRows", 50);
             if (brchCd != null && !brchCd.isBlank()) builder.queryParam("brchCd", brchCd);
-            String xml = RestClient.create().get().uri(builder.build(false).encode().toUriString()).retrieve().body(String.class);
+            byte[] xml = RestClient.create().get().uri(builder.build(false).encode().toUriString()).retrieve().body(byte[].class);
             return parseExamLocations(xml);
         } catch (Exception e) {
             log.error("QNet 시험장소 조회 실패: {}", e.getMessage());
@@ -98,7 +98,7 @@ public class QNetService {
         }
     }
 
-    private List<CertExamSchedule> parseSchedules(String xml, String keyword) throws Exception {
+    private List<CertExamSchedule> parseSchedules(byte[] xml, String keyword) throws Exception {
         List<CertExamSchedule> results = new ArrayList<>();
         Document doc = parseXml(xml);
         NodeList items = doc.getElementsByTagName("item");
@@ -119,7 +119,7 @@ public class QNetService {
         return results;
     }
 
-    private List<QualificationItem> parseQualificationList(String xml, String keyword) throws Exception {
+    private List<QualificationItem> parseQualificationList(byte[] xml, String keyword) throws Exception {
         List<QualificationItem> results = new ArrayList<>();
         Document doc = parseXml(xml);
         NodeList items = doc.getElementsByTagName("item");
@@ -141,7 +141,7 @@ public class QNetService {
         return results;
     }
 
-    private List<QualificationDetail> parseQualificationDetail(String xml) throws Exception {
+    private List<QualificationDetail> parseQualificationDetail(byte[] xml) throws Exception {
         List<QualificationDetail> results = new ArrayList<>();
         Document doc = parseXml(xml);
         NodeList items = doc.getElementsByTagName("item");
@@ -156,7 +156,7 @@ public class QNetService {
         return results;
     }
 
-    private List<ExamLocation> parseExamLocations(String xml) throws Exception {
+    private List<ExamLocation> parseExamLocations(byte[] xml) throws Exception {
         List<ExamLocation> results = new ArrayList<>();
         Document doc = parseXml(xml);
         NodeList items = doc.getElementsByTagName("item");
@@ -170,10 +170,10 @@ public class QNetService {
         return results;
     }
 
-    private Document parseXml(String xml) throws Exception {
-        if (xml == null || xml.isBlank()) throw new IllegalArgumentException("빈 응답");
+    private Document parseXml(byte[] xml) throws Exception {
+        if (xml == null || xml.length == 0) throw new IllegalArgumentException("빈 응답");
         return DocumentBuilderFactory.newInstance().newDocumentBuilder()
-                .parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
+                .parse(new ByteArrayInputStream(xml));
     }
 
     private String getText(Element el, String tag) {

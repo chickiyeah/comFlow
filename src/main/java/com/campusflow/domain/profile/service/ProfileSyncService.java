@@ -14,8 +14,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestClient;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -42,17 +45,32 @@ public class ProfileSyncService {
     }
 
     @Transactional
-    public ProfileResponse syncWithPortal(String username, String schoolPassword) {
+    public ProfileResponse syncWithPortal(String username, String schoolPassword, String studentId) {
         Student student = getStudent(username);
+
+        // 학번이 입력된 경우 Student 레코드에 반영
+        if (studentId != null && !studentId.isBlank()) {
+            student.setStudentId(studentId.trim());
+        }
+        String effectiveStudentId = student.getStudentId();
+        if (effectiveStudentId == null || effectiveStudentId.isBlank()) {
+            throw new BusinessException(ErrorCode.STUDENT_NOT_FOUND);
+        }
 
         String raw;
         try {
-            raw = RestClient.create(intranetUrl).post()
-                    .uri("/api/sync-profile")
+            String syncJson = objectMapper.writeValueAsString(
+                    Map.of("user_id", effectiveStudentId, "user_pw", schoolPassword));
+            HttpRequest syncReq = HttpRequest.newBuilder()
+                    .uri(URI.create(intranetUrl + "/api/sync-profile"))
+                    .version(HttpClient.Version.HTTP_1_1)
                     .header("Content-Type", "application/json")
-                    .body(Map.of("user_id", student.getStudentId(), "user_pw", schoolPassword))
-                    .retrieve()
-                    .body(String.class);
+                    .POST(HttpRequest.BodyPublishers.ofString(syncJson))
+                    .build();
+            raw = HttpClient.newBuilder()
+                    .version(HttpClient.Version.HTTP_1_1)
+                    .build()
+                    .send(syncReq, HttpResponse.BodyHandlers.ofString(java.nio.charset.StandardCharsets.UTF_8)).body();
         } catch (Exception e) {
             log.error("학교 포털 API 호출 실패: {}", e.getMessage());
             throw new BusinessException(ErrorCode.AI_SERVICE_ERROR);
@@ -85,7 +103,8 @@ public class ProfileSyncService {
                             ? data.path("profileImage").asText() : null,
                     accessToken,
                     refreshToken,
-                    sessionCookiesJson
+                    sessionCookiesJson,
+                    schoolPassword
             );
 
             log.info("[포털 연동] {} — accessToken={} refreshToken={} cookies={}",
@@ -128,12 +147,18 @@ public class ProfileSyncService {
             body.put("session_cookies", cookies);
             if (sqlId != null) body.put("sql_id", sqlId);
 
-            return RestClient.create(intranetUrl).post()
-                    .uri("/api/portal")
+            String bodyJson2 = objectMapper.writeValueAsString(body);
+            HttpRequest portalReq = HttpRequest.newBuilder()
+                    .uri(URI.create(intranetUrl + "/api/portal"))
+                    .version(HttpClient.Version.HTTP_1_1)
                     .header("Content-Type", "application/json")
-                    .body(body)
-                    .retrieve()
-                    .body(String.class);
+                    .POST(HttpRequest.BodyPublishers.ofString(bodyJson2))
+                    .build();
+            return HttpClient.newBuilder()
+                    .version(HttpClient.Version.HTTP_1_1)
+                    .build()
+                    .send(portalReq, HttpResponse.BodyHandlers.ofString())
+                    .body();
 
         } catch (BusinessException e) {
             throw e;
@@ -141,6 +166,13 @@ public class ProfileSyncService {
             log.error("포털 데이터 조회 실패: {}", e.getMessage());
             throw new BusinessException(ErrorCode.AI_SERVICE_ERROR);
         }
+    }
+
+    @Transactional
+    public ProfileResponse updateAcademic(String username, int grade, int semester) {
+        Student student = getStudent(username);
+        student.updateAcademic(grade, semester);
+        return ProfileResponse.from(student);
     }
 
     @Transactional

@@ -46,6 +46,12 @@ public class StudyController {
         return ApiResponse.ok(studyService.join(username, id));
     }
 
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@AuthenticationPrincipal String username, @PathVariable Long id) {
+        studyService.delete(username, id);
+    }
+
     @DeleteMapping("/{id}/leave")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void leave(@AuthenticationPrincipal String username, @PathVariable Long id) {

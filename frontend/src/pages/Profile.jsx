@@ -1,33 +1,34 @@
 import { useState, useEffect } from 'react'
 import Layout from '../components/layout/Layout'
-import { getProfile, syncProfile, disableSync } from '../api/profile'
+import { getProfile, syncProfile, disableSync, updateAcademic } from '../api/profile'
 
 export default function Profile() {
   const [profile, setProfile]   = useState(null)
   const [loading, setLoading]   = useState(true)
   const [syncing, setSyncing]   = useState(false)
   const [showPwModal, setShowPwModal] = useState(false)
+  const [showAcademicModal, setShowAcademicModal] = useState(false)
   const [password, setPassword] = useState('')
+  const [studentIdInput, setStudentIdInput] = useState('')
+  const [gradeInput, setGradeInput]     = useState(1)
+  const [semesterInput, setSemesterInput] = useState(1)
   const [error, setError]       = useState('')
   const [success, setSuccess]   = useState('')
 
   useEffect(() => {
     getProfile()
-      .then(r => setProfile(r.data.data))
+      .then(r => setProfile(r.data))
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 
   const handleSyncToggle = () => {
     if (profile?.intranetSyncEnabled) {
-      // 연동 해제
       disableSync()
-        .then(r => { setProfile(r.data.data); setSuccess('학교 포털 연동이 해제되었습니다.') })
+        .then(r => { setProfile(r.data); setSuccess('학교 포털 연동이 해제되었습니다.') })
         .catch(() => setError('연동 해제 실패'))
     } else {
-      // 연동 활성화 → 비밀번호 모달
-      setError('')
-      setPassword('')
+      setError(''); setPassword(''); setStudentIdInput(profile?.studentId ?? '')
       setShowPwModal(true)
     }
   }
@@ -37,13 +38,14 @@ export default function Profile() {
     setSyncing(true)
     setError('')
     try {
-      const r = await syncProfile(password)
-      setProfile(r.data.data)
+      const syncRes = await syncProfile(password, studentIdInput.trim())
+      setProfile(syncRes.data)
       setShowPwModal(false)
       setPassword('')
+      setStudentIdInput('')
       setSuccess('학교 포털 정보가 동기화되었습니다!')
     } catch (e) {
-      const msg = e.response?.data?.message || '동기화 실패. 비밀번호를 확인하세요.'
+      const msg = e.response?.data?.message || '동기화 실패. 학번·비밀번호를 확인하세요.'
       setError(msg)
     } finally {
       setSyncing(false)
@@ -51,9 +53,19 @@ export default function Profile() {
   }
 
   const handleManualSync = () => {
-    setError('')
-    setPassword('')
+    setError(''); setPassword(''); setStudentIdInput(profile?.studentId ?? '')
     setShowPwModal(true)
+  }
+
+  const handleAcademicSave = async () => {
+    try {
+      const r = await updateAcademic(gradeInput, semesterInput)
+      setProfile(r.data)
+      setShowAcademicModal(false)
+      setSuccess('학년/학기가 업데이트되었습니다.')
+    } catch {
+      setError('학년/학기 업데이트 실패')
+    }
   }
 
   if (loading) {
@@ -108,7 +120,16 @@ export default function Profile() {
             </div>
             <div>
               <h2 className="text-xl font-bold text-primary dark:text-white">{profile?.name ?? '—'}</h2>
-              <p className="text-sm text-outline dark:text-slate-400">{profile?.department} · {profile?.grade}학년 {profile?.semester}학기</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-outline dark:text-slate-400">{profile?.department} · {profile?.grade}학년 {profile?.semester}학기</p>
+                <button
+                  onClick={() => { setGradeInput(profile?.grade ?? 1); setSemesterInput(profile?.semester ?? 1); setShowAcademicModal(true) }}
+                  className="text-outline dark:text-slate-500 hover:text-primary dark:hover:text-white transition-colors"
+                  title="학년/학기 수정"
+                >
+                  <span className="material-symbols-outlined text-[14px]">edit</span>
+                </button>
+              </div>
               <p className="text-xs text-outline dark:text-slate-500 mt-0.5 font-mono">{profile?.studentId}</p>
             </div>
           </div>
@@ -178,14 +199,48 @@ export default function Profile() {
         </div>
       </div>
 
+      {/* 학년/학기 수정 모달 */}
+      {showAcademicModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-xs shadow-xl">
+            <h3 className="font-bold text-primary dark:text-white text-lg mb-4">학년/학기 수정</h3>
+            <div className="flex gap-3 mb-5">
+              <div className="flex-1">
+                <label className="text-xs text-outline dark:text-slate-400 block mb-1.5">학년</label>
+                <select value={gradeInput} onChange={e => setGradeInput(Number(e.target.value))}
+                  className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-primary dark:text-white focus:outline-none focus:border-primary">
+                  {[1,2,3,4].map(g => <option key={g} value={g}>{g}학년</option>)}
+                </select>
+              </div>
+              <div className="flex-1">
+                <label className="text-xs text-outline dark:text-slate-400 block mb-1.5">학기</label>
+                <select value={semesterInput} onChange={e => setSemesterInput(Number(e.target.value))}
+                  className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-primary dark:text-white focus:outline-none focus:border-primary">
+                  {[1,2].map(s => <option key={s} value={s}>{s}학기</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setShowAcademicModal(false)}
+                className="flex-1 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-outline dark:text-slate-400">
+                취소
+              </button>
+              <button onClick={handleAcademicSave}
+                className="flex-1 py-2.5 bg-secondary-fixed text-primary rounded-xl text-sm font-bold">
+                저장
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 비밀번호 입력 모달 */}
       {showPwModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-sm shadow-xl">
             <h3 className="font-bold text-primary dark:text-white text-lg mb-1">학교 포털 연동</h3>
-            <p className="text-sm text-outline dark:text-slate-400 mb-5">
-              학번: <span className="font-mono font-bold text-primary dark:text-white">{profile?.studentId}</span><br />
-              학교 포털 비밀번호를 입력하세요.
+            <p className="text-sm text-outline dark:text-slate-400 mb-4">
+              학번과 학교 포털 비밀번호를 입력하세요.
             </p>
 
             {error && (
@@ -194,15 +249,29 @@ export default function Profile() {
               </div>
             )}
 
-            <input
-              type="password"
-              placeholder="학교 포털 비밀번호"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSync()}
-              className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-primary dark:text-white mb-4 focus:outline-none focus:border-primary dark:focus:border-secondary-fixed"
-              autoFocus
-            />
+            <div className="mb-3">
+              <label className="text-xs text-outline dark:text-slate-400 block mb-1.5">학번</label>
+              <input
+                type="text"
+                placeholder="예: 201918023"
+                value={studentIdInput}
+                onChange={e => setStudentIdInput(e.target.value)}
+                className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-primary dark:text-white focus:outline-none focus:border-primary dark:focus:border-secondary-fixed font-mono"
+                autoFocus
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="text-xs text-outline dark:text-slate-400 block mb-1.5">학교 포털 비밀번호</label>
+              <input
+                type="password"
+                placeholder="학교 포털 비밀번호"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSync()}
+                className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-primary dark:text-white focus:outline-none focus:border-primary dark:focus:border-secondary-fixed"
+              />
+            </div>
 
             <div className="text-xs text-outline dark:text-slate-500 mb-4 flex items-center gap-1.5">
               <span className="material-symbols-outlined text-[14px]">lock</span>

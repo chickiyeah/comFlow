@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import Layout from '../components/layout/Layout'
 import {
-  getPortfolios, createPortfolio, deletePortfolio,
+  getPortfolios, createPortfolio, updatePortfolio, deletePortfolio,
   generateFromGithub, generateFromFile
 } from '../api/portfolio'
-import { getResumes, createResume, downloadResumePdf, deleteResume } from '../api/resume'
+import { getResumes, getResume, createResume, updateResume, downloadResumePdf, deleteResume } from '../api/resume'
 import { generateCoverLetter } from '../api/assistant'
 import { getCoverLetters, saveCoverLetter, updateCoverLetter, deleteCoverLetter } from '../api/coverLetter'
 import { getGithubTokenStatus, saveGithubToken, deleteGithubToken } from '../api/career'
@@ -59,7 +59,7 @@ function PortfolioCard({ p, onDelete, onClick }) {
   )
 }
 
-function PortfolioDetailModal({ p, onClose, onDelete }) {
+function PortfolioDetailModal({ p, onClose, onDelete, onEdit }) {
   if (!p) return null
   return (
     <div
@@ -77,6 +77,9 @@ function PortfolioDetailModal({ p, onClose, onDelete }) {
             <span className={`text-[10px] font-bold px-3 py-1.5 rounded-full ${STATUS_COLOR[p.status]}`}>
               {STATUS_LABEL[p.status]}
             </span>
+            <button onClick={() => onEdit(p)} className="p-2 rounded-full hover:bg-surface-container dark:hover:bg-slate-800 transition-colors text-outline dark:text-slate-400" title="수정">
+              <span className="material-symbols-outlined text-[20px]">edit</span>
+            </button>
             <button onClick={onClose} className="p-2 rounded-full hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
               <span className="material-symbols-outlined text-outline dark:text-slate-400">close</span>
             </button>
@@ -168,6 +171,8 @@ export default function Technical() {
 
   // Portfolio detail modal
   const [selectedPortfolio, setSelectedPortfolio] = useState(null)
+  const [editingPortfolio, setEditingPortfolio] = useState(null)
+  const [portfolioEditSaving, setPortfolioEditSaving] = useState(false)
 
   // GitHub token state
   const [hasGhToken, setHasGhToken] = useState(false)
@@ -178,6 +183,10 @@ export default function Technical() {
   // Resume create state
   const [showResumeForm, setShowResumeForm] = useState(false)
   const [resumeForm, setResumeForm] = useState({ title: '', summary: '', skills: '', targetJob: '', portfolioIds: [] })
+
+  // Resume edit state
+  const [editingResume, setEditingResume] = useState(null)
+  const [resumeEditSaving, setResumeEditSaving] = useState(false)
 
   // 자기소개서 AI 생성 state (이력서 폼 내)
   const [coverLoading, setCoverLoading] = useState(false)
@@ -198,7 +207,7 @@ export default function Technical() {
   }, [tab])
 
   useEffect(() => {
-    getGithubTokenStatus().then(r => setHasGhToken(r.data?.data?.hasToken ?? false)).catch(() => {})
+    getGithubTokenStatus().then(r => setHasGhToken(r.data?.hasToken ?? false)).catch(() => {})
   }, [])
 
   const handleSaveToken = async () => {
@@ -294,6 +303,76 @@ export default function Technical() {
     if (!confirm('포트폴리오를 삭제하시겠습니까?')) return
     await deletePortfolio(id)
     setPortfolios(prev => prev.filter(p => p.id !== id))
+  }
+
+  const openEditPortfolio = (p) => {
+    setEditingPortfolio({
+      id: p.id,
+      title: p.title ?? '',
+      role: p.role ?? '',
+      description: p.description ?? '',
+      techStack: (p.techStack ?? []).join(', '),
+      startDate: p.startDate ?? '',
+      endDate: p.endDate ?? '',
+      githubUrl: p.githubUrl ?? '',
+      deployUrl: p.deployUrl ?? '',
+      status: p.status ?? 'IN_PROGRESS',
+    })
+    setSelectedPortfolio(null)
+  }
+
+  const handleSavePortfolioEdit = async (e) => {
+    e.preventDefault()
+    if (!editingPortfolio) return
+    setPortfolioEditSaving(true)
+    try {
+      const { id, ...rest } = editingPortfolio
+      await updatePortfolio(id, {
+        ...rest,
+        startDate: rest.startDate || null,
+        endDate: rest.endDate || null,
+        githubUrl: rest.githubUrl || null,
+        deployUrl: rest.deployUrl || null,
+      })
+      setEditingPortfolio(null)
+      loadData()
+    } catch {
+      alert('포트폴리오 수정 중 오류가 발생했습니다.')
+    } finally {
+      setPortfolioEditSaving(false)
+    }
+  }
+
+  const openEditResume = async (id) => {
+    try {
+      const r = await getResume(id)
+      const d = r.data
+      setEditingResume({
+        id: d.id,
+        title: d.title ?? '',
+        targetJob: d.targetJob ?? '',
+        summary: d.summary ?? '',
+        skills: (d.skills ?? []).join(', '),
+      })
+    } catch {
+      alert('이력서 불러오기 실패')
+    }
+  }
+
+  const handleSaveResumeEdit = async (e) => {
+    e.preventDefault()
+    if (!editingResume) return
+    setResumeEditSaving(true)
+    try {
+      const { id, ...rest } = editingResume
+      await updateResume(id, rest)
+      setEditingResume(null)
+      loadData()
+    } catch {
+      alert('이력서 수정 중 오류가 발생했습니다.')
+    } finally {
+      setResumeEditSaving(false)
+    }
   }
 
   const handleCreateResume = async (e) => {
@@ -515,6 +594,9 @@ export default function Technical() {
                 <div className="flex gap-2">
                   <button onClick={() => handleDownloadPdf(r.id, r.title)} className="flex-1 py-2.5 bg-primary dark:bg-primary-container text-white rounded-xl text-label-md font-bold flex items-center justify-center gap-1.5 hover:scale-[1.02] active:scale-95 transition-transform">
                     <span className="material-symbols-outlined text-[16px]">download</span>PDF
+                  </button>
+                  <button onClick={() => openEditResume(r.id)} className="py-2.5 px-3 border border-outline-variant dark:border-slate-700 text-on-surface-variant dark:text-slate-300 rounded-xl hover:bg-surface-container dark:hover:bg-slate-800 transition-colors" title="수정">
+                    <span className="material-symbols-outlined text-[16px]">edit</span>
                   </button>
                   <button onClick={async () => { await deleteResume(r.id); loadData() }} className="py-2.5 px-3 border border-error/30 text-error rounded-xl hover:bg-error-container dark:hover:bg-error/20 transition-colors">
                     <span className="material-symbols-outlined text-[16px]">delete</span>
@@ -958,7 +1040,147 @@ export default function Technical() {
           p={selectedPortfolio}
           onClose={() => setSelectedPortfolio(null)}
           onDelete={(id) => { handleDeletePortfolio(id); setSelectedPortfolio(null) }}
+          onEdit={openEditPortfolio}
         />
+      )}
+
+      {/* 포트폴리오 수정 모달 */}
+      {editingPortfolio && (
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50 flex items-end sm:items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setEditingPortfolio(null) }}>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900">
+              <h3 className="font-['Space_Grotesk'] text-lg font-bold text-primary dark:text-white flex items-center gap-2">
+                <span className="material-symbols-outlined text-secondary dark:text-secondary-fixed">edit</span>포트폴리오 수정
+              </h3>
+              <button onClick={() => setEditingPortfolio(null)} className="p-2 rounded-full hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
+                <span className="material-symbols-outlined text-outline dark:text-slate-400">close</span>
+              </button>
+            </div>
+            <form onSubmit={handleSavePortfolioEdit} className="p-6 space-y-4">
+              <div>
+                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">제목 *</label>
+                <input required value={editingPortfolio.title} onChange={e => setEditingPortfolio(p => ({...p, title: e.target.value}))}
+                  className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              </div>
+              <div>
+                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">역할 *</label>
+                <input required value={editingPortfolio.role} onChange={e => setEditingPortfolio(p => ({...p, role: e.target.value}))}
+                  placeholder="예: 백엔드, PM, 풀스택"
+                  className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              </div>
+              <div>
+                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">설명</label>
+                <textarea value={editingPortfolio.description} onChange={e => setEditingPortfolio(p => ({...p, description: e.target.value}))}
+                  rows={4}
+                  className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
+              </div>
+              <div>
+                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">기술 스택 (쉼표 구분)</label>
+                <input value={editingPortfolio.techStack} onChange={e => setEditingPortfolio(p => ({...p, techStack: e.target.value}))}
+                  placeholder="예: Java, Spring Boot, MySQL"
+                  className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">시작일</label>
+                  <input type="date" value={editingPortfolio.startDate} onChange={e => setEditingPortfolio(p => ({...p, startDate: e.target.value}))}
+                    className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                </div>
+                <div>
+                  <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">종료일</label>
+                  <input type="date" value={editingPortfolio.endDate} onChange={e => setEditingPortfolio(p => ({...p, endDate: e.target.value}))}
+                    className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                </div>
+              </div>
+              <div>
+                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">GitHub URL</label>
+                <input type="url" value={editingPortfolio.githubUrl} onChange={e => setEditingPortfolio(p => ({...p, githubUrl: e.target.value}))}
+                  placeholder="https://github.com/..."
+                  className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              </div>
+              <div>
+                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">배포 URL</label>
+                <input type="url" value={editingPortfolio.deployUrl} onChange={e => setEditingPortfolio(p => ({...p, deployUrl: e.target.value}))}
+                  placeholder="https://..."
+                  className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              </div>
+              <div>
+                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">상태</label>
+                <div className="flex gap-2">
+                  {['IN_PROGRESS', 'COMPLETED'].map(s => (
+                    <button key={s} type="button" onClick={() => setEditingPortfolio(p => ({...p, status: s}))}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                        editingPortfolio.status === s
+                          ? 'bg-primary dark:bg-primary-container text-white'
+                          : 'bg-surface-container dark:bg-slate-800 text-on-surface-variant dark:text-slate-300'
+                      }`}>
+                      {STATUS_LABEL[s]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setEditingPortfolio(null)}
+                  className="flex-1 py-3 border border-outline-variant dark:border-slate-700 text-on-surface-variant dark:text-slate-300 rounded-xl text-sm font-bold hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
+                  취소
+                </button>
+                <button type="submit" disabled={portfolioEditSaving}
+                  className="flex-1 py-3 bg-primary dark:bg-primary-container text-white rounded-xl text-sm font-bold hover:scale-[1.02] active:scale-95 transition-transform disabled:opacity-50">
+                  {portfolioEditSaving ? '저장 중...' : '저장'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 이력서 수정 모달 */}
+      {editingResume && (
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50 flex items-end sm:items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) setEditingResume(null) }}>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900">
+              <h3 className="font-['Space_Grotesk'] text-lg font-bold text-primary dark:text-white flex items-center gap-2">
+                <span className="material-symbols-outlined text-secondary dark:text-secondary-fixed">edit</span>이력서 수정
+              </h3>
+              <button onClick={() => setEditingResume(null)} className="p-2 rounded-full hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
+                <span className="material-symbols-outlined text-outline dark:text-slate-400">close</span>
+              </button>
+            </div>
+            <form onSubmit={handleSaveResumeEdit} className="p-6 space-y-4">
+              <div>
+                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">제목 *</label>
+                <input required value={editingResume.title} onChange={e => setEditingResume(r => ({...r, title: e.target.value}))}
+                  className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              </div>
+              <div>
+                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">희망 직무</label>
+                <input value={editingResume.targetJob} onChange={e => setEditingResume(r => ({...r, targetJob: e.target.value}))}
+                  className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              </div>
+              <div>
+                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">보유 기술 (쉼표 구분)</label>
+                <input value={editingResume.skills} onChange={e => setEditingResume(r => ({...r, skills: e.target.value}))}
+                  className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              </div>
+              <div>
+                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">자기소개</label>
+                <textarea value={editingResume.summary} onChange={e => setEditingResume(r => ({...r, summary: e.target.value}))}
+                  rows={8}
+                  className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setEditingResume(null)}
+                  className="flex-1 py-3 border border-outline-variant dark:border-slate-700 text-on-surface-variant dark:text-slate-300 rounded-xl text-sm font-bold hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
+                  취소
+                </button>
+                <button type="submit" disabled={resumeEditSaving}
+                  className="flex-1 py-3 bg-primary dark:bg-primary-container text-white rounded-xl text-sm font-bold hover:scale-[1.02] active:scale-95 transition-transform disabled:opacity-50">
+                  {resumeEditSaving ? '저장 중...' : '저장'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* GitHub 토큰 설정 모달 */}

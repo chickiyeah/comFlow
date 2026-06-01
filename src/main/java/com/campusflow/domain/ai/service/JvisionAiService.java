@@ -52,7 +52,15 @@ public class JvisionAiService {
 
         try {
             JsonNode root = objectMapper.readTree(raw);
-            return root.path("choices").get(0).path("message").path("content").asText("");
+            JsonNode message = root.path("choices").get(0).path("message");
+            String content = message.path("content").asText("");
+            String reasoning = message.path("reasoning").asText("");
+            // vLLM.GPT-V-base는 reasoning 모델: 최종 답변이 content가 비거나 짧을 때 reasoning에 담김.
+            // JSON 구조화 호출에 대비해 '{' 포함 여부로 실제 답변이 있는 필드를 선택한다.
+            if (content.isBlank() || (!content.contains("{") && reasoning.contains("{"))) {
+                return reasoning.isBlank() ? content : reasoning;
+            }
+            return content;
         } catch (Exception e) {
             log.warn("jvision.ai 응답 파싱 실패: {}", e.getMessage());
             return "";

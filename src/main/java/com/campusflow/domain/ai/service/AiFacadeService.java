@@ -22,35 +22,39 @@ public class AiFacadeService {
     private final OllamaService    ollamaService;
     private final GeminiService    geminiService;
 
-    @Cacheable(value = "aiResponses")
+    @Cacheable(value = "aiResponses", unless = "#result == null || #result.isBlank()")
     public String ask(String systemPrompt, String userMessage) {
 
         // 1. jvision.ai
         try {
             String result = jvisionAiService.ask(systemPrompt, userMessage);
             if (!result.isBlank()) {
-                log.debug("[AI] jvision.ai 응답");
+                log.info("[AI] jvision.ai OK");
                 return result;
             }
-            log.warn("[AI] jvision.ai 빈 응답 → Ollama 폴백");
+            log.info("[AI] jvision.ai blank -> Ollama fallback");
         } catch (Exception e) {
-            log.warn("[AI] jvision.ai 실패 ({}) → Ollama 폴백", e.getMessage());
+            log.warn("[AI] jvision.ai FAIL ({}) -> Ollama fallback", e.getMessage());
         }
 
         // 2. Ollama round-robin (10.8.0.30 ~ .34)
         try {
             String result = ollamaService.ask(systemPrompt, userMessage);
             if (!result.isBlank()) {
-                log.debug("[AI] Ollama 응답");
+                log.info("[AI] Ollama OK");
                 return result;
             }
-            log.warn("[AI] Ollama 빈 응답 → Gemini 폴백");
+            log.warn("[AI] Ollama blank -> Gemini fallback");
         } catch (Exception e) {
-            log.warn("[AI] Ollama 전체 실패 ({}) → Gemini 폴백", e.getMessage());
+            log.warn("[AI] Ollama ALL FAIL ({}) -> Gemini fallback", e.getMessage());
         }
 
         // 3. Gemini (최후 폴백)
         log.info("[AI] Gemini 호출");
-        return geminiService.ask(systemPrompt, userMessage);
+        String geminiResult = geminiService.ask(systemPrompt, userMessage);
+        if (geminiResult.isBlank()) {
+            throw new RuntimeException("모든 AI 서비스 응답 실패 (jvision.ai + Ollama + Gemini)");
+        }
+        return geminiResult;
     }
 }

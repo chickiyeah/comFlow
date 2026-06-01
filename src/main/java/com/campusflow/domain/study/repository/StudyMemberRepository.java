@@ -12,4 +12,5 @@ public interface StudyMemberRepository extends JpaRepository<StudyMember, Long> 
     Optional<StudyMember> findByGroupIdAndStudentId(Long groupId, Long studentId);
     int countByGroupId(Long groupId);
     boolean existsByGroupIdAndStudentId(Long groupId, Long studentId);
+    void deleteByGroupId(Long groupId);
 }

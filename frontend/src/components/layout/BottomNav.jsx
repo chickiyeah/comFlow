@@ -2,7 +2,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 
 const NAV_ITEMS = [
-  { path: '/',           icon: 'dashboard',      key: 'dashboard'  },
+  { path: '/dashboard',  icon: 'dashboard',      key: 'dashboard'  },
   { path: '/academic',   icon: 'school',         key: 'academic'   },
   { path: '/facilities', icon: 'corporate_fare', key: 'facilities' },
   { path: '/technical',  icon: 'description',    key: 'technical'  },
@@ -20,7 +20,7 @@ export default function BottomNav() {
       border-t border-slate-200 dark:border-slate-800
       shadow-[0_-4px_20px_-5px_rgba(30,58,138,0.08)] h-16 px-2">
       {NAV_ITEMS.map(({ path, icon, key }) => {
-        const active = path === '/' ? pathname === '/' : pathname.startsWith(path)
+        const active = pathname === path || (path !== '/' && pathname.startsWith(path))
         return (
           <button
             key={path}

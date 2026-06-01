@@ -70,6 +70,17 @@ public class StudyService {
     }
 
     @Transactional
+    public void delete(String username, Long groupId) {
+        Student student = getStudent(username);
+        StudyGroup group = groupRepo.findById(groupId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.STUDY_GROUP_NOT_FOUND));
+        if (!group.getLeader().getId().equals(student.getId()))
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        memberRepo.deleteByGroupId(groupId);
+        groupRepo.delete(group);
+    }
+
+    @Transactional
     public void leave(String username, Long groupId) {
         Student student = getStudent(username);
         StudyMember member = memberRepo.findByGroupIdAndStudentId(groupId, student.getId())

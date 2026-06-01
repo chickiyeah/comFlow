@@ -18,7 +18,7 @@ export default function Calendar() {
   useEffect(() => {
     setLoading(true)
     getCalendarEvents(year, month)
-      .then(r => setEvents(r.data.data || []))
+      .then(r => setEvents(r.data || []))
       .catch(() => setEvents([]))
       .finally(() => setLoading(false))
   }, [year, month])

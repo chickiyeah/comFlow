@@ -15,7 +15,8 @@ public record ProfileResponse(
         String profileImageData,
         boolean intranetSyncEnabled,
         LocalDateTime intranetSyncedAt,
-        boolean hasPortalToken   // 토큰 보유 여부 (토큰 값 자체는 노출 안 함)
+        boolean hasPortalToken,
+        boolean hasPortalPassword
 ) {
     public static ProfileResponse from(Student s) {
         return new ProfileResponse(
@@ -29,7 +30,8 @@ public record ProfileResponse(
                 s.getProfileImageData(),
                 Boolean.TRUE.equals(s.getIntranetSyncEnabled()),
                 s.getIntranetSyncedAt(),
-                s.getPortalAccessToken() != null
+                s.getPortalAccessToken() != null,
+                s.getPortalPassword() != null
         );
     }
 }
