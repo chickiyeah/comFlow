@@ -11,6 +11,7 @@ const Dashboard  = lazy(() => import('./pages/Dashboard'))
 const Academic   = lazy(() => import('./pages/Academic'))
 const Facilities = lazy(() => import('./pages/Facilities'))
 const Career     = lazy(() => import('./pages/Career'))
+const Interview  = lazy(() => import('./pages/Interview'))
 const Technical  = lazy(() => import('./pages/Technical'))
 const Calendar   = lazy(() => import('./pages/Calendar'))
 const Study      = lazy(() => import('./pages/Study'))
@@ -52,6 +53,7 @@ export default function App() {
         <Route path="/academic"  element={<PrivateRoute><Academic /></PrivateRoute>} />
         <Route path="/facilities"element={<PrivateRoute><Facilities /></PrivateRoute>} />
         <Route path="/career"    element={<PrivateRoute><Career /></PrivateRoute>} />
+        <Route path="/interview" element={<PrivateRoute><Interview /></PrivateRoute>} />
         <Route path="/technical" element={<PrivateRoute><Technical /></PrivateRoute>} />
         <Route path="/calendar"  element={<PrivateRoute><Calendar /></PrivateRoute>} />
         <Route path="/study"     element={<PrivateRoute><Study /></PrivateRoute>} />

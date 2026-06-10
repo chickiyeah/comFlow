@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { path: '/academic',   icon: 'school',         key: 'academic'   },
   { path: '/facilities', icon: 'corporate_fare', key: 'facilities' },
   { path: '/career',     icon: 'work',           key: 'career'     },
+  { path: '/interview',  icon: 'record_voice_over', key: 'interview' },
   { path: '/technical',  icon: 'description',    key: 'technical'  },
   { path: '/calendar',   icon: 'calendar_month', key: 'calendar'   },
   { path: '/study',      icon: 'groups',         key: 'study'      },
