@@ -1,6 +1,7 @@
 package com.campusflow.domain.classroom.repository;
 
 import com.campusflow.domain.classroom.entity.ClassMember;
+import com.campusflow.domain.classroom.entity.ClassRole;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -17,4 +18,6 @@ public interface ClassMemberRepository extends JpaRepository<ClassMember, Long> 
     List<ClassMember> findByClassRoomIdOrderByJoinedAtAsc(Long classRoomId);
 
     long countByClassRoomId(Long classRoomId);
+
+    long countByClassRoomIdAndRole(Long classRoomId, ClassRole role);
 }
