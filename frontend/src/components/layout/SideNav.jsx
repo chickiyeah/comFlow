@@ -7,10 +7,14 @@ const NAV_ITEMS = [
   { path: '/academic',   icon: 'school',         key: 'academic'   },
   { path: '/facilities', icon: 'corporate_fare', key: 'facilities' },
   { path: '/career',     icon: 'work',           key: 'career'     },
+  { path: '/courses',    icon: 'smart_display',  key: 'courses'    },
+  { path: '/quizzes',    icon: 'quiz',           key: 'quizzes'    },
   { path: '/interview',  icon: 'record_voice_over', key: 'interview' },
   { path: '/technical',  icon: 'description',    key: 'technical'  },
   { path: '/calendar',   icon: 'calendar_month', key: 'calendar'   },
   { path: '/study',      icon: 'groups',         key: 'study'      },
+  { path: '/classroom',  icon: 'cast_for_education', key: 'classroom' },
+  { path: '/kmate',      icon: 'smart_toy',      key: 'kmate'      },
   { path: '/profile',    icon: 'manage_accounts',key: 'profile'    },
 ]
 
@@ -54,7 +58,7 @@ export default function SideNav() {
                 {icon}
               </span>
               <span className="font-['Space_Grotesk'] text-[8px] uppercase tracking-wider font-medium mt-1">
-                {t(`nav.${key}`, key === 'admin' ? '관리자' : key)}
+                {t(`nav.${key}`, key === 'admin' ? t('ui.admin') : key)}
               </span>
             </button>
           )
@@ -65,7 +69,7 @@ export default function SideNav() {
       <div className="mt-auto">
         <button className="group flex flex-col items-center text-primary-fixed-dim/70 hover:text-white transition-all duration-200 py-2 w-full">
           <span className="material-symbols-outlined text-[22px] group-hover:scale-110 transition-transform">help_outline</span>
-          <span className="font-['Space_Grotesk'] text-[8px] uppercase tracking-wider font-medium mt-1">Support</span>
+          <span className="font-['Space_Grotesk'] text-[8px] uppercase tracking-wider font-medium mt-1">{t('ui.support')}</span>
         </button>
       </div>
     </aside>

@@ -7,6 +7,7 @@ const LANGUAGES = [
   { code: 'zh', label: '中文',       flag: '🇨🇳' },
   { code: 'ja', label: '日本語',     flag: '🇯🇵' },
   { code: 'vi', label: 'Tiếng Việt', flag: '🇻🇳' },
+  { code: 'my', label: 'မြန်မာ',     flag: '🇲🇲' },
 ]
 
 export { LANGUAGES }
