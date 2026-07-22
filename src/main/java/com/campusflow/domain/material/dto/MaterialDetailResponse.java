@@ -18,6 +18,7 @@ public record MaterialDetailResponse(
         String filename,
         String contentType,
         String streamUrl,
+        String textContent,
         String createdByName,
         LocalDateTime createdAt
 ) {
@@ -30,6 +31,7 @@ public record MaterialDetailResponse(
                 f != null ? f.getOriginalFilename() : null,
                 f != null ? f.getContentType() : null,
                 streamUrl,
+                m.getTextContent(),
                 m.getCreatedBy() != null ? m.getCreatedBy().getName() : null,
                 m.getCreatedAt()
         );
