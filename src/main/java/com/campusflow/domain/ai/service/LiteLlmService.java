@@ -5,8 +5,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -30,6 +34,9 @@ public class LiteLlmService {
 
     @Value("${litellm.text-model:gpt-oss-120b}")
     private String textModel;
+
+    @Value("${litellm.audio-model:whisper-large-v3}")
+    private String audioModel;
 
     private final ObjectMapper objectMapper;
 
@@ -65,5 +72,23 @@ public class LiteLlmService {
             log.warn("LiteLLM 응답 파싱 실패: {}", e.getMessage());
             return "";
         }
+    }
+
+    /** 음성 전사(Groq whisper-large-v3). 미설정이면 IllegalStateException. */
+    public String transcribeAudio(MultipartFile file) {
+        if (!isEnabled()) {
+            throw new IllegalStateException("LiteLLM base-url 미설정");
+        }
+        MultiValueMap<String, Object> parts = new LinkedMultiValueMap<>();
+        parts.add("file", file.getResource());
+        parts.add("model", audioModel);
+        parts.add("response_format", "text");
+        return RestClient.create(baseUrl).post()
+                .uri("/v1/audio/transcriptions")
+                .header("Authorization", "Bearer " + apiKey)
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(parts)
+                .retrieve()
+                .body(String.class);
     }
 }
