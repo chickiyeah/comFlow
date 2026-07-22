@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import Layout from '../components/layout/Layout'
 import { getMyClasses, createClass, joinClass } from '../api/classroom'
+import { getProgressSummary } from '../api/classProgress'
 
 const ROLE_STYLE = {
   OWNER:   'bg-accent-container text-on-accent-container',
@@ -14,6 +15,7 @@ export default function Classroom() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [classes, setClasses] = useState([])
+  const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(false)
   const [showCreate, setShowCreate] = useState(false)
   const [showJoin, setShowJoin] = useState(false)
@@ -28,7 +30,10 @@ export default function Classroom() {
       setClasses(res.data || [])
     } finally { setLoading(false) }
   }
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+    getProgressSummary().then(res => setSummary(res.data)).catch(() => {})
+  }, [])
 
   const handleCreate = async () => {
     if (!form.name.trim()) return
@@ -69,6 +74,15 @@ export default function Classroom() {
             </button>
           </div>
         </div>
+
+        {summary && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            <SummaryStat icon="school" label={t('classroom.statJoined', '참여 중')} value={summary.classesJoined} />
+            <SummaryStat icon="cast_for_education" label={t('classroom.statTeaching', '강의 중')} value={summary.classesTeaching} />
+            <SummaryStat icon="robot_2" label={t('classroom.statKmate', 'K.MATE 질문')} value={summary.kmateQuestions} />
+            <SummaryStat icon="menu_book" label={t('classroom.statMaterials', '자료 수')} value={summary.materials} />
+          </div>
+        )}
 
         {loading ? (
           <p className="text-center text-text-muted py-12">{t('common.loading', '불러오는 중…')}</p>
@@ -122,6 +136,18 @@ export default function Classroom() {
         )}
       </div>
     </Layout>
+  )
+}
+
+function SummaryStat({ icon, label, value }) {
+  return (
+    <div className="card p-4 flex items-center gap-3">
+      <span className="material-symbols-outlined text-accent text-2xl">{icon}</span>
+      <div>
+        <p className="text-title-lg font-bold text-primary dark:text-white leading-none">{value}</p>
+        <p className="text-xs text-text-muted mt-1">{label}</p>
+      </div>
+    </div>
   )
 }
 

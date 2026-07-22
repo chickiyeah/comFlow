@@ -9,11 +9,13 @@ import { getPosts, createPost } from '../api/classpost'
 import { getResources, createResource, deleteResource } from '../api/classResource'
 import { getSessions, createSession, getSession, markAttendance, getMyClassAttendance } from '../api/classAttendance'
 import { startMeeting, getMeeting, endMeeting } from '../api/classMeeting'
+import { getGradebook } from '../api/assignment'
 
 const TABS = [
   { key: 'stream',      icon: 'forum',       label: '스트림' },
   { key: 'materials',   icon: 'menu_book',   label: '자료' },
   { key: 'assignments', icon: 'assignment',  label: '과제' },
+  { key: 'gradebook',   icon: 'grade',       label: '성적' },
   { key: 'resources',   icon: 'folder',      label: '자료실' },
   { key: 'attendance',  icon: 'fact_check',  label: '출석' },
   { key: 'meeting',     icon: 'videocam',    label: '화상수업' },
@@ -86,6 +88,7 @@ export default function ClassDetail() {
             {tab === 'stream' && <StreamTab classId={id} posts={data.posts} onChange={load} />}
             {tab === 'materials' && <MaterialsTab classId={id} materials={data.materials} isTeacher={isTeacher} onChange={load} navigate={navigate} />}
             {tab === 'assignments' && <AssignmentsTab assignments={data.assignments} navigate={navigate} />}
+            {tab === 'gradebook' && <GradebookTab classId={id} />}
             {tab === 'resources' && <ResourcesTab classId={id} isTeacher={isTeacher} />}
             {tab === 'attendance' && <AttendanceTab classId={id} isTeacher={isTeacher} />}
             {tab === 'meeting' && <MeetingTab classId={id} isTeacher={isTeacher} />}
@@ -208,6 +211,63 @@ function AssignmentsTab({ assignments, navigate }) {
           </div>
         </div>
       ))}
+    </div>
+  )
+}
+
+function GradebookTab({ classId }) {
+  const { t } = useTranslation()
+  const [book, setBook] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    getGradebook(classId).then(res => setBook(res.data)).finally(() => setLoading(false))
+  }, [classId])
+
+  if (loading) return <p className="text-center text-text-muted py-8">{t('common.loading', '불러오는 중…')}</p>
+  if (!book || book.assignments.length === 0)
+    return <p className="text-center text-text-muted py-8">{t('classDetail.noGradebook', '채점된 과제가 없습니다.')}</p>
+
+  const avgByAssignment = Object.fromEntries((book.averages || []).map(a => [a.assignmentId, a.average]))
+
+  return (
+    <div className="card p-4 overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-outline-variant dark:border-[#33355c]">
+            <th className="text-left py-2 pr-4 text-text-muted font-semibold">{t('classDetail.student', '학생')}</th>
+            {book.assignments.map(a => (
+              <th key={a.assignmentId} className="text-center py-2 px-3 text-text-muted font-semibold whitespace-nowrap">
+                {a.title}<span className="block text-[10px] font-normal">/{a.points}</span>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {book.rows.map(row => (
+            <tr key={row.studentId} className="border-b border-outline-variant/50 dark:border-[#33355c]/50">
+              <td className="py-2 pr-4 font-semibold text-on-surface dark:text-white whitespace-nowrap">{row.studentName}</td>
+              {row.cells.map(c => (
+                <td key={c.assignmentId} className="text-center py-2 px-3">
+                  {c.grade != null ? <span className="font-bold text-primary dark:text-white">{c.grade}</span>
+                    : c.status ? <span className="text-xs text-text-muted">{c.status}</span> : <span className="text-text-muted">-</span>}
+                </td>
+              ))}
+            </tr>
+          ))}
+          {book.averages && (
+            <tr>
+              <td className="py-2 pr-4 text-xs text-text-muted font-semibold">{t('classDetail.average', '평균')}</td>
+              {book.assignments.map(a => (
+                <td key={a.assignmentId} className="text-center py-2 px-3 text-xs text-text-muted">
+                  {avgByAssignment[a.assignmentId] != null ? avgByAssignment[a.assignmentId].toFixed(1) : '-'}
+                </td>
+              ))}
+            </tr>
+          )}
+        </tbody>
+      </table>
     </div>
   )
 }
