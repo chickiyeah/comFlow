@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import Layout from '../components/layout/Layout'
 import { getClass, getClassMembers } from '../api/classroom'
@@ -16,6 +16,7 @@ const TABS = [
 
 export default function ClassDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const { t } = useTranslation()
   const [tab, setTab] = useState('stream')
   const [info, setInfo] = useState(null)
@@ -78,7 +79,7 @@ export default function ClassDetail() {
           <>
             {tab === 'stream' && <StreamTab classId={id} posts={data.posts} onChange={load} />}
             {tab === 'materials' && <MaterialsTab classId={id} materials={data.materials} isTeacher={isTeacher} onChange={load} />}
-            {tab === 'assignments' && <AssignmentsTab assignments={data.assignments} />}
+            {tab === 'assignments' && <AssignmentsTab assignments={data.assignments} navigate={navigate} />}
             {tab === 'people' && <PeopleTab members={data.members} />}
           </>
         )}
@@ -172,7 +173,7 @@ function MaterialsTab({ classId, materials, isTeacher, onChange }) {
   )
 }
 
-function AssignmentsTab({ assignments }) {
+function AssignmentsTab({ assignments, navigate }) {
   const { t } = useTranslation()
   const STATUS = {
     TURNED_IN: 'bg-success-bg text-success-text', LATE: 'bg-warning-bg text-warning-text',
@@ -183,7 +184,8 @@ function AssignmentsTab({ assignments }) {
   return (
     <div className="space-y-3">
       {assignments.map(a => (
-        <div key={a.id} className="card p-4">
+        <div key={a.id} onClick={() => navigate(`/assignments/${a.id}`)}
+             className="card p-4 cursor-pointer hover:scale-[1.01] transition-transform">
           <div className="flex items-center justify-between">
             <p className="font-semibold text-on-surface dark:text-white">{a.title}</p>
             {a.mySubmissionStatus
