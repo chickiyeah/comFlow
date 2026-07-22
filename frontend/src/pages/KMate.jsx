@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import Layout from '../components/layout/Layout'
 import { askKmate, getKmateHistory } from '../api/kmate'
@@ -41,12 +42,18 @@ export default function KMate() {
   return (
     <Layout>
       <div className="max-w-3xl mx-auto flex flex-col h-[calc(100vh-8rem)]">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="material-symbols-outlined text-accent text-3xl">robot_2</span>
-          <div>
-            <h1 className="font-space text-2xl font-bold text-primary dark:text-white">K.MATE</h1>
-            <p className="text-sm text-text-muted">{t('kmate.subtitle', 'TOPIK 한국어 AI 튜터')}</p>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-accent text-3xl">robot_2</span>
+            <div>
+              <h1 className="font-space text-2xl font-bold text-primary dark:text-white">K.MATE</h1>
+              <p className="text-sm text-text-muted">{t('kmate.subtitle', 'TOPIK 한국어 AI 튜터')}</p>
+            </div>
           </div>
+          <Link to="/exam" className="btn-secondary">
+            <span className="material-symbols-outlined text-[18px]">timer</span>
+            {t('kmate.examMode', '모의고사')}
+          </Link>
         </div>
 
         <div className="card flex-1 overflow-y-auto p-4 space-y-4">
