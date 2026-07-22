@@ -17,6 +17,7 @@ const Technical  = lazy(() => import('./pages/Technical'))
 const Calendar   = lazy(() => import('./pages/Calendar'))
 const Study      = lazy(() => import('./pages/Study'))
 const Classroom  = lazy(() => import('./pages/Classroom'))
+const ClassDetail = lazy(() => import('./pages/ClassDetail'))
 const KMate      = lazy(() => import('./pages/KMate'))
 const Courses    = lazy(() => import('./pages/Courses'))
 const Notices    = lazy(() => import('./pages/Notices'))
@@ -93,6 +94,7 @@ export default function App() {
         <Route path="/calendar"  element={<PrivateRoute><Calendar /></PrivateRoute>} />
         <Route path="/study"     element={<PrivateRoute><Study /></PrivateRoute>} />
         <Route path="/classroom" element={<PrivateRoute><Classroom /></PrivateRoute>} />
+        <Route path="/classroom/:id" element={<PrivateRoute><ClassDetail /></PrivateRoute>} />
         <Route path="/kmate"     element={<PrivateRoute><KMate /></PrivateRoute>} />
         <Route path="/courses"   element={<PrivateRoute><Courses /></PrivateRoute>} />
         <Route path="/notices"   element={<PrivateRoute><Notices /></PrivateRoute>} />

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import Layout from '../components/layout/Layout'
 import { getMyClasses, createClass, joinClass } from '../api/classroom'
@@ -11,6 +12,7 @@ const ROLE_STYLE = {
 
 export default function Classroom() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const [classes, setClasses] = useState([])
   const [loading, setLoading] = useState(false)
   const [showCreate, setShowCreate] = useState(false)
@@ -77,7 +79,8 @@ export default function Classroom() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             {classes.map(c => (
-              <div key={c.id} className="card p-5">
+              <div key={c.id} onClick={() => navigate(`/classroom/${c.id}`)}
+                   className="card p-5 cursor-pointer hover:scale-[1.01] transition-transform">
                 <div className="flex items-start justify-between mb-2">
                   <h3 className="font-bold text-lg text-on-surface dark:text-white">{c.name}</h3>
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${ROLE_STYLE[c.myRole] || ROLE_STYLE.STUDENT}`}>
