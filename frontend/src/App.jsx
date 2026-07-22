@@ -21,6 +21,7 @@ const ClassDetail = lazy(() => import('./pages/ClassDetail'))
 const KMate      = lazy(() => import('./pages/KMate'))
 const Exam       = lazy(() => import('./pages/Exam'))
 const AssignmentDetail = lazy(() => import('./pages/AssignmentDetail'))
+const MaterialViewer = lazy(() => import('./pages/MaterialViewer'))
 const Courses    = lazy(() => import('./pages/Courses'))
 const Notices    = lazy(() => import('./pages/Notices'))
 const Quizzes    = lazy(() => import('./pages/Quizzes'))
@@ -100,6 +101,7 @@ export default function App() {
         <Route path="/kmate"     element={<PrivateRoute><KMate /></PrivateRoute>} />
         <Route path="/exam"      element={<PrivateRoute><Exam /></PrivateRoute>} />
         <Route path="/assignments/:assignmentId" element={<PrivateRoute><AssignmentDetail /></PrivateRoute>} />
+        <Route path="/materials/:materialId" element={<PrivateRoute><MaterialViewer /></PrivateRoute>} />
         <Route path="/courses"   element={<PrivateRoute><Courses /></PrivateRoute>} />
         <Route path="/notices"   element={<PrivateRoute><Notices /></PrivateRoute>} />
         <Route path="/quizzes"   element={<PrivateRoute><Quizzes /></PrivateRoute>} />

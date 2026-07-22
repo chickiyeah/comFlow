@@ -78,7 +78,7 @@ export default function ClassDetail() {
         ) : (
           <>
             {tab === 'stream' && <StreamTab classId={id} posts={data.posts} onChange={load} />}
-            {tab === 'materials' && <MaterialsTab classId={id} materials={data.materials} isTeacher={isTeacher} onChange={load} />}
+            {tab === 'materials' && <MaterialsTab classId={id} materials={data.materials} isTeacher={isTeacher} onChange={load} navigate={navigate} />}
             {tab === 'assignments' && <AssignmentsTab assignments={data.assignments} navigate={navigate} />}
             {tab === 'people' && <PeopleTab members={data.members} />}
           </>
@@ -133,7 +133,7 @@ function StreamTab({ classId, posts, onChange }) {
   )
 }
 
-function MaterialsTab({ classId, materials, isTeacher, onChange }) {
+function MaterialsTab({ classId, materials, isTeacher, onChange, navigate }) {
   const { t } = useTranslation()
   const [title, setTitle] = useState('')
   const [file, setFile] = useState(null)
@@ -160,7 +160,8 @@ function MaterialsTab({ classId, materials, isTeacher, onChange }) {
       {materials.length === 0 ? (
         <p className="text-center text-text-muted py-8">{t('classDetail.noMaterials', '자료가 없습니다.')}</p>
       ) : materials.map(m => (
-        <div key={m.id} className="card p-4 flex items-center gap-3">
+        <div key={m.id} onClick={() => navigate(`/materials/${m.id}`)}
+             className="card p-4 flex items-center gap-3 cursor-pointer hover:scale-[1.01] transition-transform">
           <span className="material-symbols-outlined text-accent">{m.hasFile ? 'description' : 'article'}</span>
           <div className="flex-1">
             <p className="font-semibold text-on-surface dark:text-white">{m.title}</p>
