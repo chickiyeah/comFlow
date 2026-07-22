@@ -5,12 +5,14 @@ import Layout from '../components/layout/Layout'
 import {
   getMaterial, getMaterialSummary, materialAi,
   getBookmarks, addBookmark, deleteBookmark,
+  getHighlights, startHighlights, retryHighlights,
 } from '../api/material'
 
 const SIDE_TABS = [
   { key: 'summary', icon: 'summarize', label: '요약' },
   { key: 'chat',    icon: 'forum',     label: '튜터' },
   { key: 'bookmarks', icon: 'bookmark', label: '북마크' },
+  { key: 'highlights', icon: 'auto_awesome', label: '하이라이트' },
 ]
 
 export default function MaterialViewer() {
@@ -87,6 +89,7 @@ export default function MaterialViewer() {
             {sideTab === 'summary' && <SummaryPanel materialId={materialId} />}
             {sideTab === 'chat' && <ChatPanel materialId={materialId} />}
             {sideTab === 'bookmarks' && <BookmarksPanel materialId={materialId} />}
+            {sideTab === 'highlights' && <HighlightsPanel materialId={materialId} textContent={material.textContent} />}
           </div>
         </div>
       </div>
@@ -223,6 +226,96 @@ function BookmarksPanel({ materialId }) {
               </button>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+const CATEGORY_STYLE = {
+  '용어': 'bg-primary-container text-on-primary-container',
+  '개념': 'bg-accent-container text-on-accent-container',
+  '정의': 'bg-secondary-container text-on-secondary-container',
+}
+
+function HighlightsPanel({ materialId, textContent }) {
+  const { t } = useTranslation()
+  const [analysis, setAnalysis] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const pollRef = useCallback((status) => status === 'PROCESSING' || status === 'PENDING', [])
+
+  const load = useCallback(() => {
+    getHighlights(materialId).then(res => setAnalysis(res.data)).finally(() => setLoading(false))
+  }, [materialId])
+
+  useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    if (!analysis || !pollRef(analysis.status)) return
+    const id = setInterval(load, 3000)
+    return () => clearInterval(id)
+  }, [analysis, pollRef, load])
+
+  const start = async () => {
+    setLoading(true)
+    try {
+      const res = await startHighlights(materialId, [{ pageNumber: 1, text: textContent || '' }])
+      setAnalysis(res.data)
+    } finally { setLoading(false) }
+  }
+  const retry = async () => {
+    setLoading(true)
+    try { const res = await retryHighlights(materialId); setAnalysis(res.data) } finally { setLoading(false) }
+  }
+
+  if (loading && !analysis) return <div className="card p-4"><p className="text-center text-text-muted py-6">{t('common.loading', '불러오는 중…')}</p></div>
+
+  if (!textContent) {
+    return (
+      <div className="card p-4">
+        <p className="text-sm text-text-muted">{t('material.highlightNoText', '텍스트를 추출할 수 없는 자료입니다(PDF/PPTX만 지원).')}</p>
+      </div>
+    )
+  }
+
+  const status = analysis?.status || 'NONE'
+
+  return (
+    <div className="card p-4">
+      {status === 'NONE' && (
+        <button onClick={start} className="btn-hero w-full justify-center">
+          <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
+          {t('material.startHighlights', 'AI 하이라이트 생성')}
+        </button>
+      )}
+      {(status === 'PENDING' || status === 'PROCESSING') && (
+        <div className="text-center py-6">
+          <div className="w-6 h-6 border-4 border-primary border-t-accent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-text-muted">{t('material.highlightProcessing', '분석 중…')} ({analysis.completedPages}/{analysis.totalPages})</p>
+        </div>
+      )}
+      {status === 'FAILED' && (
+        <div className="text-center py-4">
+          <p className="text-sm text-danger mb-3">{analysis.errorMessage || t('material.highlightFailed', '분석 실패')}</p>
+          <button onClick={retry} className="btn-secondary">{t('material.retry', '재시도')}</button>
+        </div>
+      )}
+      {status === 'READY' && (
+        <div className="space-y-2">
+          {(analysis.highlights || []).length === 0 ? (
+            <p className="text-sm text-text-muted">{t('material.noHighlights', '추출된 하이라이트가 없습니다.')}</p>
+          ) : analysis.highlights.map((h, i) => (
+            <div key={i} className="p-3 rounded-lg bg-surface-container-low dark:bg-[#1c1e3a]">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-sm font-semibold text-on-surface dark:text-white">{h.excerpt}</p>
+                {h.category && <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${CATEGORY_STYLE[h.category] || 'chip'}`}>{h.category}</span>}
+              </div>
+              <p className="text-xs text-text-muted">{h.explanation}</p>
+            </div>
+          ))}
+          <button onClick={retry} className="btn-secondary w-full justify-center mt-2">
+            {t('material.regenerate', '다시 생성')}
+          </button>
         </div>
       )}
     </div>
