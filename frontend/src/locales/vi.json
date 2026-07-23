@@ -13,7 +13,15 @@
     "study": "Học nhóm",
     "classroom": "Lớp học",
     "kmate": "K.MATE",
-    "profile": "Cài đặt"
+    "exam": "Thi thử",
+    "profile": "Cài đặt",
+    "professor": "Giảng viên",
+    "admin": "Quản trị viên",
+    "academicGroup": "Học vụ",
+    "classroomGroup": "Lớp học",
+    "kmateGroup": "K.MATE",
+    "careerGroup": "Nghề nghiệp",
+    "studyGroup": "Học tập"
   },
   "common": {
     "save": "Lưu",

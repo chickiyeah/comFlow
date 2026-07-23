@@ -13,7 +13,15 @@
     "study": "学习组",
     "classroom": "班级",
     "kmate": "K.MATE",
-    "profile": "设置"
+    "exam": "模拟考试",
+    "profile": "设置",
+    "professor": "教授",
+    "admin": "管理员",
+    "academicGroup": "学务",
+    "classroomGroup": "课堂",
+    "kmateGroup": "K.MATE",
+    "careerGroup": "职业发展",
+    "studyGroup": "学习"
   },
   "common": {
     "save": "保存",

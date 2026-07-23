@@ -5,6 +5,7 @@
     "facilities": "အဆောက်အအုံများ",
     "career": "အလုပ်အကိုင်",
     "courses": "သင်တန်းများ",
+    "notices": "ကြေညာချက်များ",
     "quizzes": "ပဟေဠိများ",
     "interview": "အင်တာဗျူး",
     "technical": "နည်းပညာ",
@@ -12,7 +13,15 @@
     "study": "လေ့လာမှု",
     "classroom": "စာသင်ခန်း",
     "kmate": "K.MATE",
-    "profile": "ဆက်တင်များ"
+    "exam": "စမ်းသပ်စာမေးပွဲ",
+    "profile": "ဆက်တင်များ",
+    "professor": "ပါမောက္ခ",
+    "admin": "စီမံခန့်ခွဲသူ",
+    "academicGroup": "ပညာရေး",
+    "classroomGroup": "စာသင်ခန်း",
+    "kmateGroup": "K.MATE",
+    "careerGroup": "အလုပ်အကိုင်",
+    "studyGroup": "သင်ယူမှု"
   },
   "common": {
     "loading": "ဖွင့်နေသည်…",

@@ -13,7 +13,15 @@
     "study": "Study",
     "classroom": "Classroom",
     "kmate": "K.MATE",
-    "profile": "Settings"
+    "exam": "Mock Exam",
+    "profile": "Settings",
+    "professor": "Professor",
+    "admin": "Admin",
+    "academicGroup": "Academic",
+    "classroomGroup": "Classroom",
+    "kmateGroup": "K.MATE",
+    "careerGroup": "Career",
+    "studyGroup": "Learning"
   },
   "common": {
     "save": "Save",

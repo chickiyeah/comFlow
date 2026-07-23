@@ -13,7 +13,15 @@
     "study": "スタディ",
     "classroom": "クラス",
     "kmate": "K.MATE",
-    "profile": "設定"
+    "exam": "模擬試験",
+    "profile": "設定",
+    "professor": "教授",
+    "admin": "管理者",
+    "academicGroup": "学務",
+    "classroomGroup": "クラスルーム",
+    "kmateGroup": "K.MATE",
+    "careerGroup": "キャリア",
+    "studyGroup": "学習"
   },
   "common": {
     "save": "保存",

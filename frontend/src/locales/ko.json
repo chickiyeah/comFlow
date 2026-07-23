@@ -13,7 +13,15 @@
     "study": "스터디",
     "classroom": "클래스",
     "kmate": "K.MATE",
-    "profile": "설정"
+    "exam": "모의고사",
+    "profile": "설정",
+    "professor": "교수",
+    "admin": "관리자",
+    "academicGroup": "학사",
+    "classroomGroup": "클래스룸",
+    "kmateGroup": "K.MATE",
+    "careerGroup": "진로·취업",
+    "studyGroup": "학습"
   },
   "common": {
     "save": "저장",
