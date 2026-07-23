@@ -32,16 +32,28 @@ public class LiteLlmService {
     @Value("${litellm.api-key:}")
     private String apiKey;
 
-    @Value("${litellm.text-model:gpt-oss-120b}")
+    @Value("${litellm.text-model:smart}")
     private String textModel;
 
     @Value("${litellm.audio-model:whisper-large-v3}")
     private String audioModel;
 
+    @Value("${litellm.audio-enabled:false}")
+    private boolean audioEnabled;
+
     private final ObjectMapper objectMapper;
 
     public boolean isEnabled() {
         return baseUrl != null && !baseUrl.isBlank();
+    }
+
+    /**
+     * 음성 전사(whisper) 사용 가능 여부. base-url 활성화와 별개로, 게이트웨이에 whisper가
+     * 등록돼 {@code litellm.audio-enabled=true}일 때만 true. (게이트웨이 미등록 상태에서 text-only
+     * 이관 시 음성 경로가 하드 에러로 바뀌는 회귀를 방지한다.)
+     */
+    public boolean isAudioEnabled() {
+        return isEnabled() && audioEnabled;
     }
 
     /** 텍스트 채팅 완성. 미설정이면 IllegalStateException(호출부가 폴백 판단). */

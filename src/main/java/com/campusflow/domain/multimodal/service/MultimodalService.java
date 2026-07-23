@@ -66,7 +66,7 @@ public class MultimodalService {
     }
 
     private MultimodalResponse audio(MultipartFile file, String question) {
-        if (!liteLlmService.isEnabled()) {
+        if (!liteLlmService.isAudioEnabled()) {
             return new MultimodalResponse("audio",
                     "음성 분석은 함대 LiteLLM(whisper) 등록 후 지원됩니다.");
         }
