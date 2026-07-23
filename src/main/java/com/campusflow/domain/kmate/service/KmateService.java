@@ -1,5 +1,6 @@
 package com.campusflow.domain.kmate.service;
 
+import com.campusflow.domain.ai.cache.SemanticCacheService;
 import com.campusflow.domain.ai.service.AiTextService;
 import com.campusflow.domain.kmate.dto.*;
 import com.campusflow.domain.kmate.entity.KmateHistory;
@@ -45,13 +46,15 @@ public class KmateService {
     private final KmateHistoryRepository historyRepository;
     private final UserRepository userRepository;
     private final AiTextService aiTextService;
+    private final SemanticCacheService semanticCache;
     private final ObjectMapper objectMapper;
 
     @Transactional
     public KmateAskResponse ask(String username, String question) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
-        String answer = aiTextService.ask(TUTOR_SYSTEM, question);
+        String answer = semanticCache.getOrCompute(
+                "kmate-tutor", question, () -> aiTextService.ask(TUTOR_SYSTEM, question));
         if (answer == null || answer.isBlank()) {
             throw new BusinessException(ErrorCode.AI_SERVICE_ERROR);
         }
