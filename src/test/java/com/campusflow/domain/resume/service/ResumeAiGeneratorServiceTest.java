@@ -28,6 +28,7 @@ class ResumeAiGeneratorServiceTest {
         ResumeData facts = new ResumeData(
                 new ResumeData.Personal("홍길동", "201918023", "h@x", "010"),
                 new ResumeData.Education("컴퓨터정보과", 2, 1, 4.0),
+                "백엔드",
                 List.of(new ResumeData.SkillGroup("보유 기술", List.of("Java"))),
                 List.of(), List.of(), List.of(), List.of(), List.of(),
                 List.of(), null);
@@ -45,5 +46,6 @@ class ResumeAiGeneratorServiceTest {
                 .extracting(ResumeData.CoverLetterSection::question)
                 .containsExactly("성장과정", "성격의 장단점", "지원동기", "입사 후 포부");
         assertThat(draft.data().meta().honestyReport()).isNotNull();
+        assertThat(draft.data().targetJob()).isEqualTo("백엔드");
     }
 }

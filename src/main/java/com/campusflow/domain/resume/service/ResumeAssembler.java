@@ -100,13 +100,18 @@ public class ResumeAssembler {
                         a.getLevel() == null ? "" : a.getLevel().getLabel(), dateStr(a.getAwardDate())))
                 .toList();
 
-        return new ResumeData(personal, education, skills, projects, careers,
+        String targetJob = student.getDesiredJob() == null ? "" : student.getDesiredJob();
+
+        return new ResumeData(personal, education, targetJob, skills, projects, careers,
                 certs, languages, awards, List.of(), null);
     }
 
     /** 정직성 대조·프롬프트용 근거 텍스트. 여기 없는 사실은 자소서에 쓰면 안 된다. */
     public String buildEvidence(ResumeData d) {
         StringBuilder sb = new StringBuilder();
+        if (d.targetJob() != null && !d.targetJob().isBlank()) {
+            sb.append("[희망직무] ").append(d.targetJob()).append('\n');
+        }
         if (d.education() != null) {
             sb.append("[학력] ").append(nz(d.education().department()))
               .append(' ').append(d.education().grade()).append("학년 ")

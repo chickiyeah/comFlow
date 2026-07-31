@@ -82,7 +82,7 @@ public class ResumeAiGeneratorService {
         String tpl = (template == null || template.isBlank()) ? "general" : template;
         ResumeData facts = assembler.assemble(username);
         String evidence = assembler.buildEvidence(facts);
-        String targetJob = facts.education() == null ? "" : "";  // desiredJob은 evidence에 반영됨
+        String targetJob = facts.targetJob() == null ? "" : facts.targetJob();
 
         List<CoverLetterSection> sections = new ArrayList<>();
         List<HonestyReport.Fix> allFixes = new ArrayList<>();
@@ -98,7 +98,7 @@ public class ResumeAiGeneratorService {
 
         HonestyReport report = new HonestyReport(allFixes);
         ResumeData withCover = new ResumeData(
-                facts.personal(), facts.education(), facts.skills(), facts.projects(),
+                facts.personal(), facts.education(), facts.targetJob(), facts.skills(), facts.projects(),
                 facts.careers(), facts.certs(), facts.languages(), facts.awards(),
                 sections, new Meta(tpl, null, report));
 

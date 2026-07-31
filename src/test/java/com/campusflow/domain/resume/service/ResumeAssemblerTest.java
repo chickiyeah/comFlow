@@ -51,6 +51,7 @@ class ResumeAssemblerTest {
         when(student.getDepartment()).thenReturn("컴퓨터정보과");
         when(student.getGrade()).thenReturn(2);
         when(student.getSemester()).thenReturn(1);
+        when(student.getDesiredJob()).thenReturn("백엔드 개발자");
         when(studentRepository.findByUserId(1L)).thenReturn(Optional.of(student));
 
         when(gradeRepository.calculateGpa(10L)).thenReturn(4.05);
@@ -118,6 +119,7 @@ class ResumeAssemblerTest {
         assertThat(data.careers()).extracting(ResumeData.CareerEntry::type).containsOnly("경력");
         assertThat(data.awards()).extracting(ResumeData.AwardEntry::level).contains("금상");
         assertThat(data.coverLetter()).isEmpty();
-        assertThat(assembler.buildEvidence(data)).contains("Java").contains("정보처리기능사");
+        assertThat(data.targetJob()).isEqualTo("백엔드 개발자");
+        assertThat(assembler.buildEvidence(data)).contains("Java").contains("정보처리기능사").contains("희망직무");
     }
 }

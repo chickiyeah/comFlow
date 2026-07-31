@@ -12,6 +12,7 @@ import java.util.List;
 public record ResumeData(
         Personal personal,
         Education education,
+        String targetJob,
         List<SkillGroup> skills,
         List<ProjectEntry> projects,
         List<CareerEntry> careers,

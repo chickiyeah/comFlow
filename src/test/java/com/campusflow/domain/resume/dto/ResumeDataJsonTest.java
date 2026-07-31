@@ -17,6 +17,7 @@ class ResumeDataJsonTest {
         ResumeData data = new ResumeData(
                 new Personal("홍길동", "201918023", "hong@campus.ac", "010-1234-5678"),
                 new Education("컴퓨터정보과", 2, 1, 4.05),
+                "백엔드 개발자",
                 List.of(new SkillGroup("언어", List.of("Java", "Python"))),
                 List.of(new ProjectEntry("캠퍼스플로우", "2025.03~2025.06",
                         List.of("Spring", "React"), "백엔드", "출결 수기 관리",
@@ -36,5 +37,6 @@ class ResumeDataJsonTest {
         assertThat(back.education().gpa()).isEqualTo(4.05);
         assertThat(back.skills().get(0).items()).containsExactly("Java", "Python");
         assertThat(back.coverLetter().get(0).question()).isEqualTo("성장과정");
+        assertThat(back.targetJob()).isEqualTo("백엔드 개발자");
     }
 }
