@@ -738,6 +738,7 @@
     "aiGenerateResume": "Tạo sơ yếu lý lịch bằng AI",
     "generatingResume": "Đang tạo…",
     "honestyFixed": "Tự động sửa tính trung thực",
+    "create": "Tạo",
     "errResumeGenerate": "Tạo bằng AI thất bại. Vui lòng thử lại sau."
   },
   "suggestion": {

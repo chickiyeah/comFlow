@@ -738,6 +738,7 @@
     "aiGenerateResume": "Generate resume with AI",
     "generatingResume": "Generating…",
     "honestyFixed": "Honesty auto-fixes",
+    "create": "Create",
     "errResumeGenerate": "Failed to generate with AI. Please try again shortly."
   },
   "suggestion": {

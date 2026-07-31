@@ -738,6 +738,7 @@
     "aiGenerateResume": "AIで履歴書生成",
     "generatingResume": "生成中…",
     "honestyFixed": "正直性の自動修正",
+    "create": "作成",
     "errResumeGenerate": "AI生成に失敗しました。しばらくしてから再度お試しください。"
   },
   "suggestion": {

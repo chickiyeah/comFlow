@@ -738,6 +738,7 @@
     "aiGenerateResume": "AI로 이력서 생성",
     "generatingResume": "생성 중…",
     "honestyFixed": "정직성 자동수정",
+    "create": "생성하기",
     "errResumeGenerate": "AI 생성에 실패했습니다. 잠시 후 다시 시도해주세요."
   },
   "suggestion": {
