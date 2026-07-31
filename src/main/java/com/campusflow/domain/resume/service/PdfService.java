@@ -24,6 +24,9 @@ public class PdfService {
             "C:/Windows/Fonts/gulim.ttc"
     };
 
+    // 실제 구현된 리치 템플릿 화이트리스트 — 미구현 값(ncs/dev/startup/english/internship 등)은 general로 폴백(500 방지)
+    private static final java.util.Set<String> IMPLEMENTED_TEMPLATES = java.util.Set.of("general");
+
     public PdfService(TemplateEngine templateEngine) {
         this.templateEngine = templateEngine;
     }
@@ -39,6 +42,7 @@ public class PdfService {
                                     String template) {
         if (data == null) return generateResumePdf(resume);   // 구 이력서 폴백
         String tpl = (template == null || template.isBlank()) ? "general" : template;
+        if (!IMPLEMENTED_TEMPLATES.contains(tpl)) tpl = "general";   // 미구현 양식 → general 폴백 (500 방지)
         Context ctx = new Context();
         ctx.setVariable("resume", resume);
         ctx.setVariable("data", data);
