@@ -38,6 +38,17 @@ public class Resume {
     @Column(length = 255)
     private String targetJob; // 희망 직무
 
+    @Column(columnDefinition = "TEXT")
+    private String resumeData;   // ResumeData JSON
+
+    @Column(length = 20)
+    private String template;     // dev|ncs|general|startup|english|internship
+
+    private Long sourceJobId;    // C 단계 원본 공고 id (nullable)
+
+    @Column(length = 10)
+    private String sourceJobType; // saved | imported (nullable)
+
     @OneToMany(mappedBy = "resume", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ResumePortfolio> resumePortfolios = new ArrayList<>();
 
@@ -49,12 +60,15 @@ public class Resume {
     private LocalDateTime updatedAt;
 
     @Builder
-    public Resume(Student student, String title, String summary, String skills, String targetJob) {
+    public Resume(Student student, String title, String summary, String skills, String targetJob,
+                  String resumeData, String template) {
         this.student = student;
         this.title = title;
         this.summary = summary;
         this.skills = skills;
         this.targetJob = targetJob;
+        this.resumeData = resumeData;
+        this.template = template;
     }
 
     public void update(String title, String summary, String skills, String targetJob) {
@@ -62,6 +76,21 @@ public class Resume {
         this.summary = summary;
         this.skills = skills;
         this.targetJob = targetJob;
+    }
+
+    public void updateRich(String title, String summary, String skills, String targetJob,
+                           String resumeData, String template) {
+        this.title = title;
+        this.summary = summary;
+        this.skills = skills;
+        this.targetJob = targetJob;
+        this.resumeData = resumeData;
+        if (template != null && !template.isBlank()) this.template = template;
+    }
+
+    public void setSourceJob(Long sourceJobId, String sourceJobType) {
+        this.sourceJobId = sourceJobId;
+        this.sourceJobType = sourceJobType;
     }
 
     public void clearPortfolios() {

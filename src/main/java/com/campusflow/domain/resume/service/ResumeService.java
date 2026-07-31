@@ -48,6 +48,8 @@ public class ResumeService {
                 .summary(request.summary())
                 .skills(request.skills())
                 .targetJob(request.targetJob())
+                .resumeData(request.resumeData())
+                .template(request.template())
                 .build();
         resumeRepository.save(resume);
         linkPortfolios(resume, student.getId(), request.portfolioIds());
@@ -58,7 +60,8 @@ public class ResumeService {
     public ResumeResponse update(String username, Long resumeId, ResumeRequest request) {
         Student student = getStudentByUsername(username);
         Resume resume = findResume(resumeId, student.getId());
-        resume.update(request.title(), request.summary(), request.skills(), request.targetJob());
+        resume.updateRich(request.title(), request.summary(), request.skills(),
+                request.targetJob(), request.resumeData(), request.template());
         resume.clearPortfolios();
         linkPortfolios(resume, student.getId(), request.portfolioIds());
         return ResumeResponse.from(resume);

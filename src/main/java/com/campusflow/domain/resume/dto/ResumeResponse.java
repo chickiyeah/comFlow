@@ -13,6 +13,8 @@ public record ResumeResponse(
         String summary,
         List<String> skills,
         String targetJob,
+        String resumeData,
+        String template,
         List<PortfolioResponse> portfolios,
         LocalDateTime updatedAt
 ) {
@@ -28,7 +30,8 @@ public record ResumeResponse(
 
         return new ResumeResponse(
                 resume.getId(), resume.getTitle(), resume.getSummary(),
-                skillList, resume.getTargetJob(), portfolios, resume.getUpdatedAt()
+                skillList, resume.getTargetJob(), resume.getResumeData(), resume.getTemplate(),
+                portfolios, resume.getUpdatedAt()
         );
     }
 }
