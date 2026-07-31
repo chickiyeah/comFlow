@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Malgun Gothic', sans-serif; font-size: 11pt; color: #1a1a2e; padding: 44px; }
+
+        .title { text-align: center; font-size: 22pt; font-weight: bold; color: #00236f; letter-spacing: 8px; margin-bottom: 6px; }
+        .subtitle { text-align: center; font-size: 10pt; color: #666; margin-bottom: 24px; }
+
+        table.info { width: 100%; border-collapse: collapse; margin-bottom: 22px; }
+        table.info td { border: 1px solid #c8d4e8; padding: 7px 12px; font-size: 10.5pt; }
+        table.info td.label { background: #eef3fb; font-weight: bold; color: #00236f; width: 18%; }
+
+        table.grades { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
+        table.grades th { background: #00236f; color: #fff; padding: 8px 6px; font-size: 10pt; }
+        table.grades td { border: 1px solid #d4ddee; padding: 6px; font-size: 10pt; text-align: center; }
+        table.grades td.subject { text-align: left; }
+        table.grades tr:nth-child(even) td { background: #f7f9fd; }
+
+        .summary { width: 100%; border-collapse: collapse; margin-top: 4px; }
+        .summary td { padding: 9px 14px; font-size: 11pt; border: 1px solid #c8d4e8; }
+        .summary td.k { background: #eef3fb; font-weight: bold; color: #00236f; width: 18%; }
+        .summary td.v { font-weight: bold; font-size: 13pt; color: #00236f; }
+
+        .footer { margin-top: 40px; text-align: center; font-size: 10pt; color: #555; }
+        .footer .date { font-size: 11pt; color: #1a1a2e; margin-bottom: 18px; }
+        .footer .org { font-size: 13pt; font-weight: bold; letter-spacing: 4px; color: #00236f; }
+        .stamp { margin-top: 6px; font-size: 9pt; color: #999; }
+    </style>
+</head>
+<body>
+    <div class="title" th:text="${docTitle}">성적증명서</div>
+    <div class="subtitle">CampusFlow · 전주비전대학교 컴퓨터정보과</div>
+
+    <table class="info">
+        <tr>
+            <td class="label">성명</td><td th:text="${name}">홍길동</td>
+            <td class="label">학번</td><td th:text="${studentId}">201918023</td>
+        </tr>
+        <tr>
+            <td class="label">학과</td><td th:text="${department}">컴퓨터정보과</td>
+            <td class="label">학년/학기</td><td th:text="${gradeSemester}">2학년 1학기</td>
+        </tr>
+    </table>
+
+    <table class="grades">
+        <thead>
+        <tr>
+            <th style="width:14%">학년-학기</th>
+            <th style="width:46%">과목명</th>
+            <th style="width:12%">학점</th>
+            <th style="width:14%">등급</th>
+            <th style="width:14%">평점</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="g : ${grades}">
+            <td th:text="${g.gradeYear()} + '-' + ${g.gradeSemester()}">2024-1</td>
+            <td class="subject" th:text="${g.subjectName()}">자료구조</td>
+            <td th:text="${g.credits()}">3</td>
+            <td th:text="${g.letterGrade()}">A+</td>
+            <td th:text="${#numbers.formatDecimal(g.gradePoint(),1,1)}">4.5</td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(grades)}">
+            <td colspan="5" style="padding:18px;color:#888">등록된 성적이 없습니다.</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <table class="summary">
+        <tr>
+            <td class="k">총 이수학점</td><td class="v" th:text="${totalCredits} + ' 학점'">36 학점</td>
+            <td class="k">평균 평점(GPA)</td><td class="v" th:text="${gpa} + ' / 4.5'">3.8 / 4.5</td>
+        </tr>
+    </table>
+
+    <div class="footer">
+        <div class="date" th:text="${issuedDate} + ' 발급'">2026-06-24 발급</div>
+        <div class="org">전 주 비 전 대 학 교</div>
+        <div class="stamp">본 증명서는 CampusFlow를 통해 발급되었습니다.</div>
+    </div>
+</body>
+</html>
