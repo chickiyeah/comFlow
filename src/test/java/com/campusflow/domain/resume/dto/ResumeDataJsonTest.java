@@ -26,7 +26,7 @@ class ResumeDataJsonTest {
                 List.of(new LanguageEntry("TOEIC", "800", "2025.05")),
                 List.of(new AwardEntry("교내경진대회", "전주비전대", "금상", "2025.11")),
                 List.of(new CoverLetterSection("성장과정", "저는...", 5)),
-                new Meta("general", "2026-07-31T10:00:00")
+                new Meta("general", "2026-07-31T10:00:00", null)
         );
 
         String json = mapper.writeValueAsString(data);

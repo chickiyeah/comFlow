@@ -51,5 +51,5 @@ public record ResumeData(
     public record CoverLetterSection(String question, String body, int charCount) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public record Meta(String template, String generatedAt) {}
+    public record Meta(String template, String generatedAt, HonestyReport honestyReport) {}
 }
