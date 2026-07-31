@@ -71,16 +71,26 @@ class ResumeAssemblerTest {
         when(cert.getTitle()).thenReturn("정보처리기능사");
         when(cert.getOrganization()).thenReturn("한국산업인력공단");
         when(cert.getCompletedDate()).thenReturn(java.time.LocalDate.of(2025, 6, 1));
+
+        CareerActivity certInProgress = mock(CareerActivity.class);
+        lenient().when(certInProgress.getStatus()).thenReturn(ActivityStatus.IN_PROGRESS);
+        lenient().when(certInProgress.getTitle()).thenReturn("리눅스마스터");
+
         when(careerActivityRepository.findByStudentIdAndTypeOrderByCreatedAtDesc(10L, ActivityType.CERTIFICATE))
-                .thenReturn(List.of(cert));
+                .thenReturn(List.of(cert, certInProgress));
 
         CareerActivity lang = mock(CareerActivity.class);
         when(lang.getStatus()).thenReturn(ActivityStatus.COMPLETED);
         when(lang.getTitle()).thenReturn("TOEIC");
         when(lang.getScore()).thenReturn("800");
         when(lang.getCompletedDate()).thenReturn(java.time.LocalDate.of(2025, 5, 1));
+
+        CareerActivity langInProgress = mock(CareerActivity.class);
+        lenient().when(langInProgress.getStatus()).thenReturn(ActivityStatus.IN_PROGRESS);
+        lenient().when(langInProgress.getTitle()).thenReturn("JLPT");
+
         when(careerActivityRepository.findByStudentIdAndTypeOrderByCreatedAtDesc(10L, ActivityType.LANGUAGE_TEST))
-                .thenReturn(List.of(lang));
+                .thenReturn(List.of(lang, langInProgress));
 
         CareerActivity intern = mock(CareerActivity.class);
         when(intern.getOrganization()).thenReturn("ABC");
@@ -103,8 +113,8 @@ class ResumeAssemblerTest {
         assertThat(data.education().gpa()).isEqualTo(4.05);
         assertThat(data.skills()).flatExtracting(ResumeData.SkillGroup::items)
                 .contains("Java", "Spring", "React");
-        assertThat(data.certs()).extracting(ResumeData.CertEntry::name).contains("정보처리기능사");
-        assertThat(data.languages()).extracting(ResumeData.LanguageEntry::name).contains("TOEIC");
+        assertThat(data.certs()).extracting(ResumeData.CertEntry::name).contains("정보처리기능사").doesNotContain("리눅스마스터");
+        assertThat(data.languages()).extracting(ResumeData.LanguageEntry::name).contains("TOEIC").doesNotContain("JLPT");
         assertThat(data.careers()).extracting(ResumeData.CareerEntry::type).containsOnly("경력");
         assertThat(data.awards()).extracting(ResumeData.AwardEntry::level).contains("금상");
         assertThat(data.coverLetter()).isEmpty();
