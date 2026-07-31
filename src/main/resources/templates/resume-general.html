@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Malgun Gothic', sans-serif; font-size: 11pt; color: #1a1a2e; padding: 40px; }
+        .header { border-bottom: 3px solid #1b4f72; padding-bottom: 16px; margin-bottom: 20px; }
+        .header h1 { font-size: 22pt; color: #1b4f72; }
+        .header .meta { font-size: 10pt; color: #555; margin-top: 4px; }
+        .section { margin-bottom: 18px; }
+        .section-title { font-size: 13pt; font-weight: bold; color: #1b4f72;
+            border-left: 4px solid #a8d5a2; padding-left: 8px; margin-bottom: 8px; }
+        .row { margin-bottom: 4px; line-height: 1.6; }
+        .skill-tag { display: inline-block; background: #1b4f72; color: #fff;
+            padding: 2px 9px; border-radius: 12px; font-size: 9pt; margin: 2px; }
+        .card { border: 1px solid #d0e8d0; border-radius: 6px; padding: 10px 14px; margin-bottom: 8px; }
+        .card .t { font-weight: bold; color: #1b4f72; }
+        .cover p { line-height: 1.75; margin-bottom: 6px; white-space: pre-wrap; }
+        .cover h3 { font-size: 11.5pt; color: #1b4f72; margin: 10px 0 4px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1 th:text="${data.personal() != null ? data.personal().name() : ''}">이름</h1>
+        <div class="meta" th:if="${data.personal() != null}"
+             th:text="|${data.personal().email()} · ${data.personal().phone()}|">contact</div>
+        <div class="meta" th:if="${data.education() != null}"
+             th:text="|${data.education().department()} ${data.education().grade()}학년 ${data.education().semester()}학기|">학력</div>
+        <div class="meta" th:if="${data.targetJob() != null and !data.targetJob().isEmpty()}"
+             th:text="|희망 직무: ${data.targetJob()}|">희망직무</div>
+    </div>
+
+    <div class="section" th:if="${data.skills() != null and !data.skills().isEmpty()}">
+        <div class="section-title">보유 기술</div>
+        <div th:each="g : ${data.skills()}">
+            <span class="skill-tag" th:each="s : ${g.items()}" th:text="${s}">skill</span>
+        </div>
+    </div>
+
+    <div class="section" th:if="${data.projects() != null and !data.projects().isEmpty()}">
+        <div class="section-title">프로젝트</div>
+        <div class="card" th:each="p : ${data.projects()}">
+            <div class="t" th:text="|${p.title()}  (${p.period()})|">프로젝트</div>
+            <div class="row" th:if="${p.role()}" th:text="|역할: ${p.role()}|">역할</div>
+            <div class="row" th:if="${p.result()}" th:text="${p.result()}">설명</div>
+            <div class="row" th:if="${p.techStack() != null and !p.techStack().isEmpty()}"
+                 th:text="|기술: ${#strings.listJoin(p.techStack(), ', ')}|">기술</div>
+            <div class="row" th:if="${p.githubUrl()}" th:text="${p.githubUrl()}">github</div>
+        </div>
+    </div>
+
+    <div class="section" th:if="${data.careers() != null and !data.careers().isEmpty()}">
+        <div class="section-title">경력</div>
+        <div class="card" th:each="c : ${data.careers()}">
+            <div class="t" th:text="|${c.org()} · ${c.role()}  (${c.period()})|">경력</div>
+            <div class="row" th:if="${c.description()}" th:text="${c.description()}">설명</div>
+        </div>
+    </div>
+
+    <div class="section" th:if="${data.certs() != null and !data.certs().isEmpty()}">
+        <div class="section-title">자격증</div>
+        <div class="row" th:each="c : ${data.certs()}" th:text="|${c.name()} · ${c.org()} (${c.date()})|">자격증</div>
+    </div>
+
+    <div class="section" th:if="${data.languages() != null and !data.languages().isEmpty()}">
+        <div class="section-title">어학</div>
+        <div class="row" th:each="l : ${data.languages()}" th:text="|${l.name()} ${l.score()} (${l.date()})|">어학</div>
+    </div>
+
+    <div class="section" th:if="${data.awards() != null and !data.awards().isEmpty()}">
+        <div class="section-title">수상</div>
+        <div class="row" th:each="a : ${data.awards()}" th:text="|${a.title()} · ${a.org()} · ${a.level()} (${a.date()})|">수상</div>
+    </div>
+
+    <div class="section cover" th:if="${data.coverLetter() != null and !data.coverLetter().isEmpty()}">
+        <div class="section-title">자기소개서</div>
+        <div th:each="s : ${data.coverLetter()}">
+            <h3 th:text="${s.question()}">문항</h3>
+            <p th:text="${s.body()}">본문</p>
+        </div>
+    </div>
+</body>
+</html>

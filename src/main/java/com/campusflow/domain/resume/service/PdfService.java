@@ -34,6 +34,17 @@ public class PdfService {
         return render("resume-pdf", ctx);
     }
 
+    public byte[] generateResumePdf(ResumeResponse resume,
+                                    com.campusflow.domain.resume.dto.ResumeData data,
+                                    String template) {
+        if (data == null) return generateResumePdf(resume);   // 구 이력서 폴백
+        String tpl = (template == null || template.isBlank()) ? "general" : template;
+        Context ctx = new Context();
+        ctx.setVariable("resume", resume);
+        ctx.setVariable("data", data);
+        return render("resume-" + tpl, ctx);
+    }
+
     public byte[] generateTranscriptPdf(Map<String, Object> model) {
         Context ctx = new Context();
         model.forEach(ctx::setVariable);
