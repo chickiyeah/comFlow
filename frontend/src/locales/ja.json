@@ -734,7 +734,11 @@
     "errResumeCreate": "履歴書の作成中にエラーが発生しました。",
     "errPdfDownload": "PDFのダウンロード中にエラーが発生しました。",
     "errCompanyJobRequired": "会社名と職種を先に入力してください。",
-    "errCoverLetterGenerate": "志望動機書の生成中にエラーが発生しました。"
+    "errCoverLetterGenerate": "志望動機書の生成中にエラーが発生しました。",
+    "aiGenerateResume": "AIで履歴書生成",
+    "generatingResume": "生成中…",
+    "honestyFixed": "正直性の自動修正",
+    "errResumeGenerate": "AI生成に失敗しました。しばらくしてから再度お試しください。"
   },
   "suggestion": {
     "title": "匿名意見箱",

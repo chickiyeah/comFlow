@@ -1,21 +1,23 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import Layout from '../components/layout/Layout'
 import {
   getPortfolios, createPortfolio, updatePortfolio, deletePortfolio,
   generateFromGithub, generateFromFile
 } from '../api/portfolio'
-import { getResumes, getResume, createResume, updateResume, downloadResumePdf, deleteResume } from '../api/resume'
+import { getResumes, getResume, createResume, updateResume, downloadResumePdf, deleteResume, generateResume } from '../api/resume'
 import { generateCoverLetter } from '../api/assistant'
 import { getCoverLetters, saveCoverLetter, updateCoverLetter, deleteCoverLetter } from '../api/coverLetter'
 import { getGithubTokenStatus, saveGithubToken, deleteGithubToken } from '../api/career'
 
-const STATUS_LABEL = { IN_PROGRESS: '진행 중', COMPLETED: '완료' }
+const STATUS_LABEL = { IN_PROGRESS: 'status_inProgress', COMPLETED: 'status_completed' }
 const STATUS_COLOR = {
   IN_PROGRESS: 'bg-secondary-container dark:bg-secondary-fixed/20 text-on-secondary-container dark:text-secondary-fixed',
   COMPLETED:   'bg-surface-container dark:bg-slate-700 text-on-surface-variant dark:text-slate-300',
 }
 
 function PortfolioCard({ p, onDelete, onClick }) {
+  const { t } = useTranslation()
   return (
     <div
       onClick={onClick}
@@ -27,7 +29,7 @@ function PortfolioCard({ p, onDelete, onClick }) {
           <p className="text-label-md text-outline dark:text-slate-400">{p.role}</p>
         </div>
         <span className={`text-[10px] font-bold px-2 py-1 rounded-full shrink-0 ${STATUS_COLOR[p.status]}`}>
-          {STATUS_LABEL[p.status]}
+          {t(`technical.${STATUS_LABEL[p.status]}`)}
         </span>
       </div>
       {p.description && (
@@ -41,7 +43,7 @@ function PortfolioCard({ p, onDelete, onClick }) {
         </div>
       )}
       <div className="flex items-center gap-2 text-label-md text-outline dark:text-slate-500">
-        {p.startDate && <span>{p.startDate} ~ {p.endDate ?? '현재'}</span>}
+        {p.startDate && <span>{p.startDate} ~ {p.endDate ?? t('technical.present')}</span>}
         {p.githubUrl && (
           <span className="ml-auto flex items-center gap-1 text-primary dark:text-secondary-fixed">
             <span className="material-symbols-outlined text-[14px]">code</span>GitHub
@@ -60,6 +62,7 @@ function PortfolioCard({ p, onDelete, onClick }) {
 }
 
 function PortfolioDetailModal({ p, onClose, onDelete, onEdit }) {
+  const { t } = useTranslation()
   if (!p) return null
   return (
     <div
@@ -75,9 +78,9 @@ function PortfolioDetailModal({ p, onClose, onDelete, onEdit }) {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <span className={`text-[10px] font-bold px-3 py-1.5 rounded-full ${STATUS_COLOR[p.status]}`}>
-              {STATUS_LABEL[p.status]}
+              {t(`technical.${STATUS_LABEL[p.status]}`)}
             </span>
-            <button onClick={() => onEdit(p)} className="p-2 rounded-full hover:bg-surface-container dark:hover:bg-slate-800 transition-colors text-outline dark:text-slate-400" title="수정">
+            <button onClick={() => onEdit(p)} className="p-2 rounded-full hover:bg-surface-container dark:hover:bg-slate-800 transition-colors text-outline dark:text-slate-400" title={t('technical.edit')}>
               <span className="material-symbols-outlined text-[20px]">edit</span>
             </button>
             <button onClick={onClose} className="p-2 rounded-full hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
@@ -91,15 +94,15 @@ function PortfolioDetailModal({ p, onClose, onDelete, onEdit }) {
           {p.startDate && (
             <div className="flex items-center gap-2 text-sm text-on-surface-variant dark:text-slate-400">
               <span className="material-symbols-outlined text-[18px] text-primary dark:text-secondary-fixed">calendar_today</span>
-              {p.startDate} ~ {p.endDate ?? '진행 중'}
+              {p.startDate} ~ {p.endDate ?? t('technical.status_inProgress')}
             </div>
           )}
 
           {/* 설명 */}
           {p.description && (
             <div>
-              <p className="text-label-md text-outline dark:text-slate-500 mb-2">프로젝트 설명</p>
-              <p className="text-sm text-on-surface dark:text-slate-300 leading-relaxed bg-surface-container-low dark:bg-slate-800 p-4 rounded-xl">
+              <p className="text-label-md text-outline dark:text-slate-500 mb-2">{t('technical.projectDescription')}</p>
+              <p className="text-sm text-on-surface dark:text-slate-300 leading-relaxed bg-surface-container-low dark:bg-slate-800 p-4 rounded-xl whitespace-pre-line">
                 {p.description}
               </p>
             </div>
@@ -108,7 +111,7 @@ function PortfolioDetailModal({ p, onClose, onDelete, onEdit }) {
           {/* 기술 스택 */}
           {p.techStack?.length > 0 && (
             <div>
-              <p className="text-label-md text-outline dark:text-slate-500 mb-2">기술 스택</p>
+              <p className="text-label-md text-outline dark:text-slate-500 mb-2">{t('technical.techStack')}</p>
               <div className="flex flex-wrap gap-2">
                 {p.techStack.map(t => (
                   <span key={t} className="px-3 py-1.5 bg-secondary-container/20 dark:bg-secondary-fixed/10 text-on-secondary-container dark:text-secondary-fixed rounded-full text-sm font-medium border border-secondary-fixed/20">
@@ -146,7 +149,7 @@ function PortfolioDetailModal({ p, onClose, onDelete, onEdit }) {
             onClick={() => { onDelete(p.id); onClose() }}
             className="w-full py-3 border border-error/30 text-error rounded-xl text-sm font-bold hover:bg-error-container dark:hover:bg-error/20 transition-colors flex items-center justify-center gap-2"
           >
-            <span className="material-symbols-outlined text-[18px]">delete</span>포트폴리오 삭제
+            <span className="material-symbols-outlined text-[18px]">delete</span>{t('technical.deletePortfolio')}
           </button>
         </div>
       </div>
@@ -155,6 +158,7 @@ function PortfolioDetailModal({ p, onClose, onDelete, onEdit }) {
 }
 
 export default function Technical() {
+  const { t } = useTranslation()
   const [tab, setTab] = useState('portfolio')
   const [portfolios, setPortfolios] = useState([])
   const [resumes, setResumes] = useState([])
@@ -182,7 +186,11 @@ export default function Technical() {
 
   // Resume create state
   const [showResumeForm, setShowResumeForm] = useState(false)
-  const [resumeForm, setResumeForm] = useState({ title: '', summary: '', skills: '', targetJob: '', portfolioIds: [] })
+  const [resumeForm, setResumeForm] = useState({ title: '', summary: '', skills: '', targetJob: '', portfolioIds: [], resumeData: '', template: '' })
+
+  // AI 이력서 자동생성 state
+  const [resumeGenerating, setResumeGenerating] = useState(false)
+  const [honestyFixes, setHonestyFixes] = useState([])
 
   // Resume edit state
   const [editingResume, setEditingResume] = useState(null)
@@ -255,7 +263,7 @@ export default function Technical() {
       const r = await generateFromGithub(githubUrl.trim())
       setDraft(r.data)
     } catch {
-      setGenError('GitHub에서 정보를 가져오지 못했습니다.')
+      setGenError(t('technical.errGithubFetch'))
     } finally {
       setGenLoading(false)
     }
@@ -268,7 +276,7 @@ export default function Technical() {
       const r = await generateFromFile(file)
       setDraft(r.data)
     } catch {
-      setGenError('파일 분석 중 오류가 발생했습니다.')
+      setGenError(t('technical.errFileAnalyze'))
     } finally {
       setGenLoading(false)
     }
@@ -276,8 +284,8 @@ export default function Technical() {
 
   const handleSaveDraft = async () => {
     if (!draft) return
-    if (!draft.title?.trim()) { setGenError('제목이 비어있습니다. AI가 분석에 실패했을 수 있습니다.'); return }
-    if (!draft.role?.trim()) { setGenError('역할이 비어있습니다. 직접 입력 후 저장해 주세요.'); return }
+    if (!draft.title?.trim()) { setGenError(t('technical.errEmptyTitle')); return }
+    if (!draft.role?.trim()) { setGenError(t('technical.errEmptyRole')); return }
     try {
       await createPortfolio({
         title: draft.title.trim(),
@@ -295,12 +303,12 @@ export default function Technical() {
       setGithubUrl('')
       loadData()
     } catch (err) {
-      setGenError(err?.message || '저장 중 오류가 발생했습니다.')
+      setGenError(err?.message || t('technical.errSave'))
     }
   }
 
   const handleDeletePortfolio = async (id) => {
-    if (!confirm('포트폴리오를 삭제하시겠습니까?')) return
+    if (!confirm(t('technical.confirmDeletePortfolio'))) return
     await deletePortfolio(id)
     setPortfolios(prev => prev.filter(p => p.id !== id))
   }
@@ -337,7 +345,7 @@ export default function Technical() {
       setEditingPortfolio(null)
       loadData()
     } catch {
-      alert('포트폴리오 수정 중 오류가 발생했습니다.')
+      alert(t('technical.errPortfolioEdit'))
     } finally {
       setPortfolioEditSaving(false)
     }
@@ -355,7 +363,7 @@ export default function Technical() {
         skills: (d.skills ?? []).join(', '),
       })
     } catch {
-      alert('이력서 불러오기 실패')
+      alert(t('technical.errResumeLoad'))
     }
   }
 
@@ -369,7 +377,7 @@ export default function Technical() {
       setEditingResume(null)
       loadData()
     } catch {
-      alert('이력서 수정 중 오류가 발생했습니다.')
+      alert(t('technical.errResumeEdit'))
     } finally {
       setResumeEditSaving(false)
     }
@@ -380,10 +388,37 @@ export default function Technical() {
     try {
       await createResume({ ...resumeForm, portfolioIds: portfolios.slice(0, 3).map(p => p.id) })
       setShowResumeForm(false)
-      setResumeForm({ title: '', summary: '', skills: '', targetJob: '', portfolioIds: [] })
+      setResumeForm({ title: '', summary: '', skills: '', targetJob: '', portfolioIds: [], resumeData: '', template: '' })
+      setHonestyFixes([])
       if (tab === 'resume') loadData()
     } catch {
-      alert('이력서 생성 중 오류가 발생했습니다.')
+      alert(t('technical.errResumeCreate'))
+    }
+  }
+
+  const handleGenerateResume = async (template = 'general') => {
+    setResumeGenerating(true)
+    try {
+      const r = await generateResume(template)
+      const draft = r.data ?? {}   // { data, honestyReport, template }
+      const d = draft.data ?? {}
+      const skillsCsv = (d.skills || []).flatMap(g => g.items || []).join(', ')
+      const coverText = (d.coverLetter || [])
+        .map(s => `[${s.question}]\n${s.body}`).join('\n\n')
+      setResumeForm(prev => ({
+        ...prev,
+        title: prev.title || (d.personal?.name ? `${d.personal.name} 이력서` : prev.title),
+        summary: coverText || prev.summary,
+        skills: skillsCsv || prev.skills,
+        targetJob: prev.targetJob || d.targetJob || '',
+        resumeData: JSON.stringify(d),
+        template: draft.template || template,
+      }))
+      setHonestyFixes(draft.honestyReport?.fixes || [])
+    } catch {
+      alert(t('technical.errResumeGenerate'))
+    } finally {
+      setResumeGenerating(false)
     }
   }
 
@@ -397,7 +432,7 @@ export default function Technical() {
       a.click()
       URL.revokeObjectURL(url)
     } catch {
-      alert('PDF 다운로드 중 오류가 발생했습니다.')
+      alert(t('technical.errPdfDownload'))
     }
   }
 
@@ -438,12 +473,12 @@ export default function Technical() {
       setShowCLModal(false)
       loadData()
     } catch {
-      alert('저장 중 오류가 발생했습니다.')
+      alert(t('technical.errSave'))
     }
   }
 
   const handleDeleteCL = async (id) => {
-    if (!confirm('삭제하시겠습니까?')) return
+    if (!confirm(t('technical.confirmDelete'))) return
     await deleteCoverLetter(id)
     setCoverLetters(prev => prev.filter(c => c.id !== id))
     setSelectedCL(null)
@@ -451,7 +486,7 @@ export default function Technical() {
 
   const handleAiGenerateCL = async () => {
     if (!clForm.companyName.trim() || !clForm.jobTitle.trim()) {
-      alert('회사명과 직무를 먼저 입력해주세요.')
+      alert(t('technical.errCompanyJobRequired'))
       return
     }
     setClAiLoading(true)
@@ -464,18 +499,18 @@ export default function Technical() {
       })
       setClForm(f => ({ ...f, content: res.data.coverLetter }))
     } catch {
-      alert('자기소개서 생성 중 오류가 발생했습니다.')
+      alert(t('technical.errCoverLetterGenerate'))
     } finally {
       setClAiLoading(false)
     }
   }
 
   return (
-    <Layout title="포트폴리오 · 이력서">
+    <Layout title={t('technical.title')}>
       <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h2 className="font-['Space_Grotesk'] text-2xl font-bold text-primary dark:text-white">포트폴리오 · 이력서</h2>
-          <p className="text-on-surface-variant dark:text-slate-400 text-sm mt-1">프로젝트를 등록하고 이력서를 자동으로 완성하세요.</p>
+          <h2 className="font-['Space_Grotesk'] text-2xl font-bold text-primary dark:text-white">{t('technical.title')}</h2>
+          <p className="text-on-surface-variant dark:text-slate-400 text-sm mt-1">{t('technical.subtitle')}</p>
         </div>
         <div className="flex gap-2">
           {tab === 'portfolio' && (
@@ -483,17 +518,17 @@ export default function Technical() {
               onClick={() => { setShowGenModal(true); setDraft(null); setGenError('') }}
               className="btn-primary text-sm"
             >
-              <span className="material-symbols-outlined text-[18px]">auto_awesome</span>AI로 만들기
+              <span className="material-symbols-outlined text-[18px]">auto_awesome</span>{t('technical.aiGenerate')}
             </button>
           )}
           {tab === 'resume' && (
             <button onClick={() => setShowResumeForm(true)} className="btn-primary text-sm">
-              <span className="material-symbols-outlined text-[18px]">add</span>이력서 생성
+              <span className="material-symbols-outlined text-[18px]">add</span>{t('technical.createResume')}
             </button>
           )}
           {tab === 'coverletter' && (
             <button onClick={openNewCL} className="btn-primary text-sm">
-              <span className="material-symbols-outlined text-[18px]">add</span>자기소개서 생성
+              <span className="material-symbols-outlined text-[18px]">add</span>{t('technical.createCoverLetter')}
             </button>
           )}
         </div>
@@ -502,9 +537,9 @@ export default function Technical() {
       {/* Tabs */}
       <div className="flex gap-1 p-1 bg-surface-container dark:bg-slate-800 rounded-2xl w-fit mb-6">
         {[
-          { key: 'portfolio',   label: '포트폴리오', icon: 'work_history' },
-          { key: 'resume',      label: '이력서',     icon: 'description'  },
-          { key: 'coverletter', label: '자기소개서', icon: 'edit_note'    },
+          { key: 'portfolio',   label: t('technical.tab_portfolio'), icon: 'work_history' },
+          { key: 'resume',      label: t('technical.tab_resume'),    icon: 'description'  },
+          { key: 'coverletter', label: t('technical.tab_coverLetter'), icon: 'edit_note'    },
         ].map(t => (
           <button
             key={t.key}
@@ -537,17 +572,17 @@ export default function Technical() {
             {hasGhToken ? 'lock_open' : 'lock'}
           </span>
           <span className={hasGhToken ? 'text-green-700 dark:text-green-300' : 'text-on-surface-variant dark:text-slate-400'}>
-            {hasGhToken ? 'GitHub 개인 토큰 등록됨 — 프라이빗 저장소 접근 가능' : 'GitHub 개인 토큰 미등록 — 퍼블릭 저장소만 분석 가능'}
+            {hasGhToken ? t('technical.ghTokenRegistered') : t('technical.ghTokenNotRegistered')}
           </span>
           <div className="ml-auto flex gap-2">
             <button onClick={() => { setTokenInput(''); setShowTokenModal(true) }}
               className="text-xs px-3 py-1 rounded-lg bg-primary/10 dark:bg-primary-container/20 text-primary dark:text-secondary-fixed font-semibold hover:bg-primary/20 transition-colors">
-              {hasGhToken ? '변경' : '등록'}
+              {hasGhToken ? t('technical.change') : t('technical.register')}
             </button>
             {hasGhToken && (
               <button onClick={handleDeleteToken}
                 className="text-xs px-3 py-1 rounded-lg bg-error/10 dark:bg-error/20 text-error font-semibold hover:bg-error/20 transition-colors">
-                삭제
+                {t('technical.delete')}
               </button>
             )}
           </div>
@@ -563,10 +598,10 @@ export default function Technical() {
         ) : (
           <div className="card p-16 text-center">
             <span className="material-symbols-outlined text-[64px] text-outline dark:text-slate-600 mb-4">work_outline</span>
-            <p className="text-xl font-bold text-primary dark:text-white font-['Space_Grotesk']">포트폴리오가 없습니다</p>
-            <p className="text-on-surface-variant dark:text-slate-400 text-sm mt-2 mb-6">GitHub 링크나 PPT 파일로 AI가 자동으로 만들어드립니다.</p>
+            <p className="text-xl font-bold text-primary dark:text-white font-['Space_Grotesk']">{t('technical.noPortfolio')}</p>
+            <p className="text-on-surface-variant dark:text-slate-400 text-sm mt-2 mb-6">{t('technical.noPortfolioDesc')}</p>
             <button onClick={() => { setShowGenModal(true); setDraft(null) }} className="btn-primary mx-auto">
-              <span className="material-symbols-outlined text-[18px]">auto_awesome</span>AI로 만들기
+              <span className="material-symbols-outlined text-[18px]">auto_awesome</span>{t('technical.aiGenerate')}
             </button>
           </div>
         )
@@ -590,12 +625,12 @@ export default function Technical() {
                     <span key={s} className="text-[10px] px-2 py-0.5 bg-secondary-container/30 dark:bg-secondary-fixed/10 text-on-secondary-container dark:text-secondary-fixed rounded-full">{s}</span>
                   ))}
                 </div>
-                <p className="text-label-md text-outline dark:text-slate-400 mb-3">연결된 프로젝트 {r.portfolios?.length ?? 0}개</p>
+                <p className="text-label-md text-outline dark:text-slate-400 mb-3">{t('technical.linkedProjects', { count: r.portfolios?.length ?? 0 })}</p>
                 <div className="flex gap-2">
                   <button onClick={() => handleDownloadPdf(r.id, r.title)} className="flex-1 py-2.5 bg-primary dark:bg-primary-container text-white rounded-xl text-label-md font-bold flex items-center justify-center gap-1.5 hover:scale-[1.02] active:scale-95 transition-transform">
                     <span className="material-symbols-outlined text-[16px]">download</span>PDF
                   </button>
-                  <button onClick={() => openEditResume(r.id)} className="py-2.5 px-3 border border-outline-variant dark:border-slate-700 text-on-surface-variant dark:text-slate-300 rounded-xl hover:bg-surface-container dark:hover:bg-slate-800 transition-colors" title="수정">
+                  <button onClick={() => openEditResume(r.id)} className="py-2.5 px-3 border border-outline-variant dark:border-slate-700 text-on-surface-variant dark:text-slate-300 rounded-xl hover:bg-surface-container dark:hover:bg-slate-800 transition-colors" title={t('technical.edit')}>
                     <span className="material-symbols-outlined text-[16px]">edit</span>
                   </button>
                   <button onClick={async () => { await deleteResume(r.id); loadData() }} className="py-2.5 px-3 border border-error/30 text-error rounded-xl hover:bg-error-container dark:hover:bg-error/20 transition-colors">
@@ -608,10 +643,10 @@ export default function Technical() {
         ) : (
           <div className="card p-16 text-center">
             <span className="material-symbols-outlined text-[64px] text-outline dark:text-slate-600 mb-4">description</span>
-            <p className="text-xl font-bold text-primary dark:text-white font-['Space_Grotesk']">이력서가 없습니다</p>
-            <p className="text-on-surface-variant dark:text-slate-400 text-sm mt-2 mb-6">포트폴리오를 연결해 이력서를 자동으로 완성하세요.</p>
+            <p className="text-xl font-bold text-primary dark:text-white font-['Space_Grotesk']">{t('technical.noResume')}</p>
+            <p className="text-on-surface-variant dark:text-slate-400 text-sm mt-2 mb-6">{t('technical.noResumeDesc')}</p>
             <button onClick={() => setShowResumeForm(true)} className="btn-primary mx-auto">
-              <span className="material-symbols-outlined text-[18px]">add</span>이력서 생성
+              <span className="material-symbols-outlined text-[18px]">add</span>{t('technical.createResume')}
             </button>
           </div>
         )
@@ -655,10 +690,10 @@ export default function Technical() {
         ) : (
           <div className="card p-16 text-center">
             <span className="material-symbols-outlined text-[64px] text-outline dark:text-slate-600 mb-4">edit_note</span>
-            <p className="text-xl font-bold text-primary dark:text-white font-['Space_Grotesk']">자기소개서가 없습니다</p>
-            <p className="text-on-surface-variant dark:text-slate-400 text-sm mt-2 mb-6">지원 회사에 맞는 자기소개서를 AI가 작성해드립니다.</p>
+            <p className="text-xl font-bold text-primary dark:text-white font-['Space_Grotesk']">{t('technical.noCoverLetter')}</p>
+            <p className="text-on-surface-variant dark:text-slate-400 text-sm mt-2 mb-6">{t('technical.noCoverLetterDesc')}</p>
             <button onClick={openNewCL} className="btn-primary mx-auto">
-              <span className="material-symbols-outlined text-[18px]">add</span>자기소개서 생성
+              <span className="material-symbols-outlined text-[18px]">add</span>{t('technical.createCoverLetter')}
             </button>
           </div>
         )
@@ -678,7 +713,7 @@ export default function Technical() {
                 <h3 className="font-['Space_Grotesk'] text-lg font-bold text-primary dark:text-white">{selectedCL.title}</h3>
               </div>
               <div className="flex items-center gap-2 shrink-0 ml-3">
-                <button onClick={() => openEditCL(selectedCL)} className="p-2 rounded-full hover:bg-surface-container dark:hover:bg-slate-800 transition-colors text-outline dark:text-slate-400" title="수정">
+                <button onClick={() => openEditCL(selectedCL)} className="p-2 rounded-full hover:bg-surface-container dark:hover:bg-slate-800 transition-colors text-outline dark:text-slate-400" title={t('technical.edit')}>
                   <span className="material-symbols-outlined text-[20px]">edit</span>
                 </button>
                 <button onClick={() => setSelectedCL(null)} className="p-2 rounded-full hover:bg-surface-container dark:hover:bg-slate-800 transition-colors text-outline dark:text-slate-400">
@@ -692,13 +727,13 @@ export default function Technical() {
             <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex gap-2">
               <button onClick={() => {
                 navigator.clipboard.writeText(selectedCL.content)
-                alert('클립보드에 복사됐습니다.')
+                alert(t('technical.copiedToClipboard'))
               }} className="flex-1 py-2.5 border border-outline-variant dark:border-slate-700 text-on-surface-variant dark:text-slate-300 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
-                <span className="material-symbols-outlined text-[18px]">content_copy</span>복사
+                <span className="material-symbols-outlined text-[18px]">content_copy</span>{t('technical.copy')}
               </button>
               <button onClick={() => handleDeleteCL(selectedCL.id)}
                 className="py-2.5 px-4 border border-error/30 text-error rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-error-container dark:hover:bg-error/20 transition-colors">
-                <span className="material-symbols-outlined text-[18px]">delete</span>삭제
+                <span className="material-symbols-outlined text-[18px]">delete</span>{t('technical.delete')}
               </button>
             </div>
           </div>
@@ -713,7 +748,7 @@ export default function Technical() {
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900">
               <h3 className="font-['Space_Grotesk'] text-lg font-bold text-primary dark:text-white flex items-center gap-2">
                 <span className="material-symbols-outlined text-secondary dark:text-secondary-fixed">edit_note</span>
-                {editingCL ? '자기소개서 수정' : '자기소개서 생성'}
+                {editingCL ? t('technical.editCoverLetter') : t('technical.createCoverLetter')}
               </h3>
               <button onClick={() => setShowCLModal(false)} className="p-2 rounded-full hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
                 <span className="material-symbols-outlined text-outline dark:text-slate-400">close</span>
@@ -722,24 +757,24 @@ export default function Technical() {
             <form onSubmit={handleSaveCL} className="p-6 space-y-4">
               {/* 제목 */}
               <div>
-                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">제목</label>
+                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">{t('technical.fieldTitle')}</label>
                 <input value={clForm.title} onChange={e => setClForm(f => ({...f, title: e.target.value}))}
-                  placeholder="예: 카카오 백엔드 지원" required
+                  placeholder={t('technical.clTitlePlaceholder')} required
                   className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
               </div>
 
               {/* 회사 + 직무 */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">지원 회사</label>
+                  <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">{t('technical.targetCompany')}</label>
                   <input value={clForm.companyName} onChange={e => setClForm(f => ({...f, companyName: e.target.value}))}
-                    placeholder="예: 카카오" required
+                    placeholder={t('technical.companyPlaceholder')} required
                     className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
                 </div>
                 <div>
-                  <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">직무</label>
+                  <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">{t('technical.jobTitle')}</label>
                   <input value={clForm.jobTitle} onChange={e => setClForm(f => ({...f, jobTitle: e.target.value}))}
-                    placeholder="예: 백엔드 개발자" required
+                    placeholder={t('technical.jobPlaceholder')} required
                     className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
                 </div>
               </div>
@@ -747,18 +782,25 @@ export default function Technical() {
               {/* 소제목 선택 */}
               <div>
                 <p className="text-label-md text-on-surface-variant dark:text-slate-400 mb-2">
-                  소제목 <span className="text-outline dark:text-slate-500">(선택 · AI가 항목별로 작성)</span>
+                  {t('technical.sectionLabel')} <span className="text-outline dark:text-slate-500">{t('technical.sectionHint')}</span>
                 </p>
                 {/* 프리셋 */}
                 <div className="flex flex-wrap gap-2 mb-2">
-                  {['지원동기', '성장과정', '직무역량', '입사 후 포부', '팀워크/협업경험', '문제해결 경험'].map(s => (
-                    <button key={s} type="button" onClick={() => toggleSection(s)}
+                  {[
+                    { code: 'motivation', value: '지원동기' },
+                    { code: 'growth', value: '성장과정' },
+                    { code: 'competency', value: '직무역량' },
+                    { code: 'aspiration', value: '입사 후 포부' },
+                    { code: 'teamwork', value: '팀워크/협업경험' },
+                    { code: 'problemSolving', value: '문제해결 경험' },
+                  ].map(({ code, value }) => (
+                    <button key={code} type="button" onClick={() => toggleSection(value)}
                       className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
-                        clSections.includes(s)
+                        clSections.includes(value)
                           ? 'bg-primary dark:bg-primary-container text-white'
                           : 'bg-surface-container dark:bg-slate-800 text-on-surface-variant dark:text-slate-300 hover:bg-surface-container-high dark:hover:bg-slate-700'
                       }`}>
-                      {clSections.includes(s) && <span className="mr-1">✓</span>}{s}
+                      {clSections.includes(value) && <span className="mr-1">✓</span>}{t(`technical.section_${code}`)}
                     </button>
                   ))}
                 </div>
@@ -766,11 +808,11 @@ export default function Technical() {
                 <div className="flex gap-2">
                   <input value={clCustomSection} onChange={e => setClCustomSection(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustomSection())}
-                    placeholder="직접 입력 후 Enter"
+                    placeholder={t('technical.customSectionPlaceholder')}
                     className="flex-1 px-3 py-2 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
                   <button type="button" onClick={addCustomSection}
                     className="px-3 py-2 bg-surface-container dark:bg-slate-700 text-primary dark:text-secondary-fixed rounded-xl text-sm font-bold hover:bg-surface-container-high dark:hover:bg-slate-600 transition-colors">
-                    추가
+                    {t('technical.add')}
                   </button>
                 </div>
                 {/* 선택된 소제목 */}
@@ -792,30 +834,30 @@ export default function Technical() {
                 onClick={handleAiGenerateCL}
                 className="w-full py-2.5 bg-primary/10 dark:bg-primary-container/20 text-primary dark:text-secondary-fixed border border-primary/20 dark:border-primary-container/40 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-primary/20 dark:hover:bg-primary-container/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                 {clAiLoading
-                  ? <><div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />AI 작성 중...</>
-                  : <><span className="material-symbols-outlined text-[18px]">auto_awesome</span>AI로 자기소개서 자동 작성</>
+                  ? <><div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />{t('technical.aiWriting')}</>
+                  : <><span className="material-symbols-outlined text-[18px]">auto_awesome</span>{t('technical.aiWriteCoverLetter')}</>
                 }
               </button>
 
               {/* 내용 */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-label-md text-on-surface-variant dark:text-slate-400">내용</label>
-                  <span className="text-label-md text-outline dark:text-slate-500">{clForm.content.length}자</span>
+                  <label className="text-label-md text-on-surface-variant dark:text-slate-400">{t('technical.content')}</label>
+                  <span className="text-label-md text-outline dark:text-slate-500">{t('technical.charCount', { count: clForm.content.length })}</span>
                 </div>
                 <textarea value={clForm.content} onChange={e => setClForm(f => ({...f, content: e.target.value}))}
-                  placeholder="AI로 생성하거나 직접 작성해주세요." rows={10} required
+                  placeholder={t('technical.contentPlaceholder')} rows={10} required
                   className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
               </div>
 
               <div className="flex gap-3 pt-1">
                 <button type="button" onClick={() => setShowCLModal(false)}
                   className="flex-1 py-3 border border-outline-variant dark:border-slate-700 text-on-surface-variant dark:text-slate-300 rounded-xl text-sm font-bold hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
-                  취소
+                  {t('technical.cancel')}
                 </button>
                 <button type="submit"
                   className="flex-1 py-3 bg-primary dark:bg-primary-container text-white rounded-xl text-sm font-bold hover:scale-[1.02] active:scale-95 transition-transform">
-                  {editingCL ? '수정 완료' : '저장'}
+                  {editingCL ? t('technical.editComplete') : t('technical.save')}
                 </button>
               </div>
             </form>
@@ -829,7 +871,7 @@ export default function Technical() {
           <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900">
               <h3 className="font-['Space_Grotesk'] text-lg font-bold text-primary dark:text-white flex items-center gap-2">
-                <span className="material-symbols-outlined text-secondary dark:text-secondary-fixed">auto_awesome</span>AI 포트폴리오 생성
+                <span className="material-symbols-outlined text-secondary dark:text-secondary-fixed">auto_awesome</span>{t('technical.aiPortfolioGenerate')}
               </h3>
               <button onClick={() => { setShowGenModal(false); setDraft(null) }} className="p-2 rounded-full hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
                 <span className="material-symbols-outlined text-outline dark:text-slate-400">close</span>
@@ -841,7 +883,7 @@ export default function Technical() {
                 <>
                   {/* GitHub input */}
                   <div>
-                    <p className="font-bold text-sm text-primary dark:text-white mb-2">GitHub 저장소</p>
+                    <p className="font-bold text-sm text-primary dark:text-white mb-2">{t('technical.githubUrl')}</p>
                     <div className="flex gap-2">
                       <input
                         value={githubUrl}
@@ -854,20 +896,20 @@ export default function Technical() {
                         disabled={genLoading || !githubUrl.trim()}
                         className="px-4 py-2.5 bg-primary dark:bg-primary-container text-white rounded-xl text-sm font-bold disabled:opacity-50 hover:scale-[1.02] active:scale-95 transition-transform"
                       >
-                        {genLoading ? '분석 중...' : '분석'}
+                        {genLoading ? t('technical.analyzingShort') : t('technical.analyze')}
                       </button>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3">
                     <div className="flex-1 h-px bg-outline-variant dark:bg-slate-700" />
-                    <span className="text-label-md text-outline dark:text-slate-500">또는</span>
+                    <span className="text-label-md text-outline dark:text-slate-500">{t('technical.or')}</span>
                     <div className="flex-1 h-px bg-outline-variant dark:bg-slate-700" />
                   </div>
 
                   {/* File upload */}
                   <div>
-                    <p className="font-bold text-sm text-primary dark:text-white mb-2">파일 업로드 (PDF · PPTX)</p>
+                    <p className="font-bold text-sm text-primary dark:text-white mb-2">{t('technical.fileUpload')}</p>
                     <input type="file" accept=".pdf,.pptx" ref={fileRef} className="hidden" onChange={e => e.target.files[0] && handleFileGenerate(e.target.files[0])} />
                     <button
                       onClick={() => fileRef.current?.click()}
@@ -875,7 +917,7 @@ export default function Technical() {
                       className="w-full py-8 border-2 border-dashed border-outline-variant dark:border-slate-700 rounded-2xl text-on-surface-variant dark:text-slate-400 hover:border-primary dark:hover:border-secondary-fixed hover:text-primary dark:hover:text-secondary-fixed transition-colors disabled:opacity-50 flex flex-col items-center gap-2"
                     >
                       <span className="material-symbols-outlined text-3xl">{genLoading ? 'hourglass_empty' : 'upload_file'}</span>
-                      <span className="text-sm font-medium">{genLoading ? 'AI 분석 중...' : '파일을 드래그하거나 클릭해 업로드'}</span>
+                      <span className="text-sm font-medium">{genLoading ? t('technical.analyzing') : t('technical.fileUploadHint')}</span>
                     </button>
                   </div>
 
@@ -885,14 +927,14 @@ export default function Technical() {
                 /* Draft preview */
                 <>
                   <div className="p-4 bg-secondary-container/20 dark:bg-secondary-fixed/10 rounded-2xl border border-secondary-fixed/30 mb-2">
-                    <p className="text-label-md text-outline dark:text-slate-400 mb-1">AI가 생성한 초안입니다. 저장 후 수정할 수 있습니다.</p>
+                    <p className="text-label-md text-outline dark:text-slate-400 mb-1">{t('technical.draftNotice')}</p>
                   </div>
                   {[
-                    { label: '제목', val: draft.title },
-                    { label: '역할', val: draft.role },
-                    { label: '설명', val: draft.description },
-                    { label: '기술 스택', val: draft.techStack?.join(', ') },
-                    { label: '상태', val: draft.status === 'COMPLETED' ? '완료' : '진행 중' },
+                    { label: t('technical.fieldTitle'), val: draft.title },
+                    { label: t('technical.fieldRole'), val: draft.role },
+                    { label: t('technical.fieldDescription'), val: draft.description },
+                    { label: t('technical.techStack'), val: draft.techStack?.join(', ') },
+                    { label: t('technical.fieldStatus'), val: draft.status === 'COMPLETED' ? t('technical.status_completed') : t('technical.status_inProgress') },
                   ].map(f => f.val && (
                     <div key={f.label} className="space-y-1">
                       <p className="text-label-md text-outline dark:text-slate-400">{f.label}</p>
@@ -902,10 +944,10 @@ export default function Technical() {
                   {genError && <p className="text-error text-sm bg-error-container dark:bg-error/20 px-4 py-3 rounded-xl">{genError}</p>}
                   <div className="flex gap-3 pt-2">
                     <button onClick={() => setDraft(null)} className="flex-1 py-3 border border-outline-variant dark:border-slate-700 text-on-surface-variant dark:text-slate-300 rounded-xl text-sm font-bold hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
-                      다시 생성
+                      {t('technical.regenerate')}
                     </button>
                     <button onClick={handleSaveDraft} className="flex-1 py-3 bg-primary dark:bg-primary-container text-white rounded-xl text-sm font-bold hover:scale-[1.02] active:scale-95 transition-transform">
-                      저장하기
+                      {t('technical.saveDraft')}
                     </button>
                   </div>
                 </>
@@ -921,17 +963,36 @@ export default function Technical() {
           <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900">
               <h3 className="font-['Space_Grotesk'] text-lg font-bold text-primary dark:text-white flex items-center gap-2">
-                <span className="material-symbols-outlined text-secondary dark:text-secondary-fixed">description</span>이력서 생성
+                <span className="material-symbols-outlined text-secondary dark:text-secondary-fixed">description</span>{t('technical.createResume')}
               </h3>
               <button onClick={() => setShowResumeForm(false)} className="p-2 rounded-full hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
                 <span className="material-symbols-outlined text-outline dark:text-slate-400">close</span>
               </button>
             </div>
             <form onSubmit={handleCreateResume} className="p-6 space-y-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  className="btn-secondary text-sm"
+                  disabled={resumeGenerating}
+                  onClick={() => handleGenerateResume('general')}
+                >
+                  <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
+                  {resumeGenerating ? t('technical.generatingResume') : t('technical.aiGenerateResume')}
+                </button>
+                {honestyFixes.length > 0 && (
+                  <span
+                    className="chip"
+                    title={honestyFixes.map(f => f.reason).filter(Boolean).join('\n')}
+                  >
+                    {t('technical.honestyFixed')} {honestyFixes.length}
+                  </span>
+                )}
+              </div>
               {[
-                { key: 'title', label: '이력서 제목', placeholder: '예: 백엔드 개발자 지원' },
-                { key: 'targetJob', label: '희망 직무', placeholder: '예: 백엔드 개발자' },
-                { key: 'skills', label: '보유 기술 (쉼표 구분)', placeholder: '예: Java, Spring Boot, MySQL' },
+                { key: 'title', label: t('technical.resumeTitle'), placeholder: t('technical.resumeTitlePlaceholder') },
+                { key: 'targetJob', label: t('technical.desiredJob'), placeholder: t('technical.jobPlaceholder') },
+                { key: 'skills', label: t('technical.skillsLabel'), placeholder: t('technical.skillsPlaceholder') },
               ].map(f => (
                 <div key={f.key}>
                   <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">{f.label}</label>
@@ -948,22 +1009,22 @@ export default function Technical() {
               <div className="p-4 bg-primary/5 dark:bg-primary-container/20 rounded-2xl border border-primary/20 dark:border-primary-container/40 space-y-3">
                 <p className="font-bold text-sm text-primary dark:text-white flex items-center gap-2">
                   <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
-                  AI 자기소개서 자동 생성
+                  {t('technical.aiCoverLetterAuto')}
                 </p>
                 <p className="text-label-md text-on-surface-variant dark:text-slate-400">
-                  지원 회사와 직무를 입력하면 AI가 포트폴리오·성적·수상내역을 분석해 맞춤 자기소개서를 작성합니다.
+                  {t('technical.aiCoverLetterAutoDesc')}
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   <input
                     value={coverCompany}
                     onChange={e => setCoverCompany(e.target.value)}
-                    placeholder="지원 회사 (예: 카카오)"
+                    placeholder={t('technical.coverCompanyPlaceholder')}
                     className="px-3 py-2.5 bg-white dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                   />
                   <input
                     value={coverJobTitle}
                     onChange={e => setCoverJobTitle(e.target.value)}
-                    placeholder="직무 (예: 백엔드 개발자)"
+                    placeholder={t('technical.coverJobPlaceholder')}
                     className="px-3 py-2.5 bg-white dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                   />
                 </div>
@@ -980,7 +1041,7 @@ export default function Technical() {
                       })
                       setResumeForm(prev => ({ ...prev, summary: res.data.coverLetter }))
                     } catch {
-                      alert('자기소개서 생성 중 오류가 발생했습니다.')
+                      alert(t('technical.errCoverLetterGenerate'))
                     } finally {
                       setCoverLoading(false)
                     }
@@ -988,30 +1049,30 @@ export default function Technical() {
                   className="w-full py-2.5 bg-primary dark:bg-primary-container text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {coverLoading
-                    ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />AI 작성 중...</>
-                    : <><span className="material-symbols-outlined text-[18px]">edit_note</span>자기소개서 생성</>
+                    ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{t('technical.aiWriting')}</>
+                    : <><span className="material-symbols-outlined text-[18px]">edit_note</span>{t('technical.createCoverLetter')}</>
                   }
                 </button>
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-label-md text-on-surface-variant dark:text-slate-400">자기소개서</label>
+                  <label className="text-label-md text-on-surface-variant dark:text-slate-400">{t('technical.tab_coverLetter')}</label>
                   {resumeForm.summary && (
-                    <span className="text-label-md text-outline dark:text-slate-500">{resumeForm.summary.length}자</span>
+                    <span className="text-label-md text-outline dark:text-slate-500">{t('technical.charCount', { count: resumeForm.summary.length })}</span>
                   )}
                 </div>
                 <textarea
                   value={resumeForm.summary}
                   onChange={e => setResumeForm(prev => ({ ...prev, summary: e.target.value }))}
-                  placeholder="AI로 생성하거나 직접 작성해주세요."
+                  placeholder={t('technical.contentPlaceholder')}
                   rows={6}
                   className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
                 />
               </div>
               {portfolios.length > 0 && (
                 <div>
-                  <p className="text-label-md text-on-surface-variant dark:text-slate-400 mb-2">연결할 포트폴리오 ({portfolios.length}개 자동 연결)</p>
+                  <p className="text-label-md text-on-surface-variant dark:text-slate-400 mb-2">{t('technical.linkPortfolios', { count: portfolios.length })}</p>
                   <div className="space-y-2 max-h-32 overflow-y-auto">
                     {portfolios.slice(0, 3).map(p => (
                       <div key={p.id} className="flex items-center gap-2 text-sm text-on-surface dark:text-slate-300 bg-surface-container-low dark:bg-slate-800 px-3 py-2 rounded-lg">
@@ -1023,10 +1084,10 @@ export default function Technical() {
               )}
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowResumeForm(false)} className="flex-1 py-3 border border-outline-variant dark:border-slate-700 text-on-surface-variant dark:text-slate-300 rounded-xl text-sm font-bold hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
-                  취소
+                  {t('technical.cancel')}
                 </button>
                 <button type="submit" className="flex-1 py-3 bg-primary dark:bg-primary-container text-white rounded-xl text-sm font-bold hover:scale-[1.02] active:scale-95 transition-transform">
-                  생성하기
+                  {t('technical.create')}
                 </button>
               </div>
             </form>
@@ -1050,7 +1111,7 @@ export default function Technical() {
           <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900">
               <h3 className="font-['Space_Grotesk'] text-lg font-bold text-primary dark:text-white flex items-center gap-2">
-                <span className="material-symbols-outlined text-secondary dark:text-secondary-fixed">edit</span>포트폴리오 수정
+                <span className="material-symbols-outlined text-secondary dark:text-secondary-fixed">edit</span>{t('technical.editPortfolio')}
               </h3>
               <button onClick={() => setEditingPortfolio(null)} className="p-2 rounded-full hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
                 <span className="material-symbols-outlined text-outline dark:text-slate-400">close</span>
@@ -1058,36 +1119,36 @@ export default function Technical() {
             </div>
             <form onSubmit={handleSavePortfolioEdit} className="p-6 space-y-4">
               <div>
-                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">제목 *</label>
+                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">{t('technical.fieldTitleRequired')}</label>
                 <input required value={editingPortfolio.title} onChange={e => setEditingPortfolio(p => ({...p, title: e.target.value}))}
                   className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
               </div>
               <div>
-                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">역할 *</label>
+                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">{t('technical.fieldRoleRequired')}</label>
                 <input required value={editingPortfolio.role} onChange={e => setEditingPortfolio(p => ({...p, role: e.target.value}))}
-                  placeholder="예: 백엔드, PM, 풀스택"
+                  placeholder={t('technical.rolePlaceholder')}
                   className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
               </div>
               <div>
-                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">설명</label>
+                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">{t('technical.fieldDescription')}</label>
                 <textarea value={editingPortfolio.description} onChange={e => setEditingPortfolio(p => ({...p, description: e.target.value}))}
                   rows={4}
                   className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
               </div>
               <div>
-                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">기술 스택 (쉼표 구분)</label>
+                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">{t('technical.techStackLabel')}</label>
                 <input value={editingPortfolio.techStack} onChange={e => setEditingPortfolio(p => ({...p, techStack: e.target.value}))}
-                  placeholder="예: Java, Spring Boot, MySQL"
+                  placeholder={t('technical.skillsPlaceholder')}
                   className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">시작일</label>
+                  <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">{t('technical.startDate')}</label>
                   <input type="date" value={editingPortfolio.startDate} onChange={e => setEditingPortfolio(p => ({...p, startDate: e.target.value}))}
                     className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
                 </div>
                 <div>
-                  <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">종료일</label>
+                  <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">{t('technical.endDate')}</label>
                   <input type="date" value={editingPortfolio.endDate} onChange={e => setEditingPortfolio(p => ({...p, endDate: e.target.value}))}
                     className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
                 </div>
@@ -1099,13 +1160,13 @@ export default function Technical() {
                   className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
               </div>
               <div>
-                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">배포 URL</label>
+                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">{t('technical.deployUrl')}</label>
                 <input type="url" value={editingPortfolio.deployUrl} onChange={e => setEditingPortfolio(p => ({...p, deployUrl: e.target.value}))}
                   placeholder="https://..."
                   className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
               </div>
               <div>
-                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">상태</label>
+                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">{t('technical.fieldStatus')}</label>
                 <div className="flex gap-2">
                   {['IN_PROGRESS', 'COMPLETED'].map(s => (
                     <button key={s} type="button" onClick={() => setEditingPortfolio(p => ({...p, status: s}))}
@@ -1114,7 +1175,7 @@ export default function Technical() {
                           ? 'bg-primary dark:bg-primary-container text-white'
                           : 'bg-surface-container dark:bg-slate-800 text-on-surface-variant dark:text-slate-300'
                       }`}>
-                      {STATUS_LABEL[s]}
+                      {t(`technical.${STATUS_LABEL[s]}`)}
                     </button>
                   ))}
                 </div>
@@ -1122,11 +1183,11 @@ export default function Technical() {
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setEditingPortfolio(null)}
                   className="flex-1 py-3 border border-outline-variant dark:border-slate-700 text-on-surface-variant dark:text-slate-300 rounded-xl text-sm font-bold hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
-                  취소
+                  {t('technical.cancel')}
                 </button>
                 <button type="submit" disabled={portfolioEditSaving}
                   className="flex-1 py-3 bg-primary dark:bg-primary-container text-white rounded-xl text-sm font-bold hover:scale-[1.02] active:scale-95 transition-transform disabled:opacity-50">
-                  {portfolioEditSaving ? '저장 중...' : '저장'}
+                  {portfolioEditSaving ? t('technical.saving') : t('technical.save')}
                 </button>
               </div>
             </form>
@@ -1140,7 +1201,7 @@ export default function Technical() {
           <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900">
               <h3 className="font-['Space_Grotesk'] text-lg font-bold text-primary dark:text-white flex items-center gap-2">
-                <span className="material-symbols-outlined text-secondary dark:text-secondary-fixed">edit</span>이력서 수정
+                <span className="material-symbols-outlined text-secondary dark:text-secondary-fixed">edit</span>{t('technical.editResume')}
               </h3>
               <button onClick={() => setEditingResume(null)} className="p-2 rounded-full hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
                 <span className="material-symbols-outlined text-outline dark:text-slate-400">close</span>
@@ -1148,22 +1209,22 @@ export default function Technical() {
             </div>
             <form onSubmit={handleSaveResumeEdit} className="p-6 space-y-4">
               <div>
-                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">제목 *</label>
+                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">{t('technical.fieldTitleRequired')}</label>
                 <input required value={editingResume.title} onChange={e => setEditingResume(r => ({...r, title: e.target.value}))}
                   className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
               </div>
               <div>
-                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">희망 직무</label>
+                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">{t('technical.desiredJob')}</label>
                 <input value={editingResume.targetJob} onChange={e => setEditingResume(r => ({...r, targetJob: e.target.value}))}
                   className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
               </div>
               <div>
-                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">보유 기술 (쉼표 구분)</label>
+                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">{t('technical.skillsLabel')}</label>
                 <input value={editingResume.skills} onChange={e => setEditingResume(r => ({...r, skills: e.target.value}))}
                   className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
               </div>
               <div>
-                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">자기소개</label>
+                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">{t('technical.selfIntro')}</label>
                 <textarea value={editingResume.summary} onChange={e => setEditingResume(r => ({...r, summary: e.target.value}))}
                   rows={8}
                   className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
@@ -1171,11 +1232,11 @@ export default function Technical() {
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setEditingResume(null)}
                   className="flex-1 py-3 border border-outline-variant dark:border-slate-700 text-on-surface-variant dark:text-slate-300 rounded-xl text-sm font-bold hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
-                  취소
+                  {t('technical.cancel')}
                 </button>
                 <button type="submit" disabled={resumeEditSaving}
                   className="flex-1 py-3 bg-primary dark:bg-primary-container text-white rounded-xl text-sm font-bold hover:scale-[1.02] active:scale-95 transition-transform disabled:opacity-50">
-                  {resumeEditSaving ? '저장 중...' : '저장'}
+                  {resumeEditSaving ? t('technical.saving') : t('technical.save')}
                 </button>
               </div>
             </form>
@@ -1187,11 +1248,11 @@ export default function Technical() {
       {showTokenModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowTokenModal(false)}>
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
-            <h3 className="font-['Space_Grotesk'] text-lg font-bold text-primary dark:text-white mb-1">GitHub 개인 액세스 토큰</h3>
+            <h3 className="font-['Space_Grotesk'] text-lg font-bold text-primary dark:text-white mb-1">{t('technical.ghTokenTitle')}</h3>
             <p className="text-sm text-on-surface-variant dark:text-slate-400 mb-4">
-              프라이빗 저장소의 AI 분석을 위해 필요합니다.<br />
-              GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens 에서 발급하세요.<br />
-              <span className="text-xs text-outline dark:text-slate-500">필요 권한: <code>Contents (read)</code></span>
+              {t('technical.ghTokenDesc1')}<br />
+              {t('technical.ghTokenDesc2')}<br />
+              <span className="text-xs text-outline dark:text-slate-500">{t('technical.ghTokenPermission')} <code>Contents (read)</code></span>
             </p>
             <input
               value={tokenInput}
@@ -1203,11 +1264,11 @@ export default function Technical() {
             <div className="flex gap-3">
               <button onClick={() => setShowTokenModal(false)}
                 className="flex-1 py-2.5 border border-outline-variant dark:border-slate-700 dark:text-slate-300 rounded-xl text-sm font-semibold hover:bg-surface-container transition-colors">
-                취소
+                {t('technical.cancel')}
               </button>
               <button onClick={handleSaveToken} disabled={!tokenInput.trim() || tokenSaving}
                 className="flex-1 py-2.5 bg-primary dark:bg-primary-container text-white rounded-xl text-sm font-semibold shadow hover:scale-[1.01] active:scale-95 transition-transform disabled:opacity-50">
-                {tokenSaving ? '저장중...' : '저장'}
+                {tokenSaving ? t('technical.saving') : t('technical.save')}
               </button>
             </div>
           </div>

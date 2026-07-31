@@ -734,7 +734,11 @@
     "errResumeCreate": "이력서 생성 중 오류가 발생했습니다.",
     "errPdfDownload": "PDF 다운로드 중 오류가 발생했습니다.",
     "errCompanyJobRequired": "회사명과 직무를 먼저 입력해주세요.",
-    "errCoverLetterGenerate": "자기소개서 생성 중 오류가 발생했습니다."
+    "errCoverLetterGenerate": "자기소개서 생성 중 오류가 발생했습니다.",
+    "aiGenerateResume": "AI로 이력서 생성",
+    "generatingResume": "생성 중…",
+    "honestyFixed": "정직성 자동수정",
+    "errResumeGenerate": "AI 생성에 실패했습니다. 잠시 후 다시 시도해주세요."
   },
   "suggestion": {
     "title": "익명 건의함",

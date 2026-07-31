@@ -734,7 +734,11 @@
     "errResumeCreate": "Đã xảy ra lỗi khi tạo sơ yếu lý lịch.",
     "errPdfDownload": "Đã xảy ra lỗi khi tải xuống PDF.",
     "errCompanyJobRequired": "Vui lòng nhập tên công ty và vị trí trước.",
-    "errCoverLetterGenerate": "Đã xảy ra lỗi khi tạo thư xin việc."
+    "errCoverLetterGenerate": "Đã xảy ra lỗi khi tạo thư xin việc.",
+    "aiGenerateResume": "Tạo sơ yếu lý lịch bằng AI",
+    "generatingResume": "Đang tạo…",
+    "honestyFixed": "Tự động sửa tính trung thực",
+    "errResumeGenerate": "Tạo bằng AI thất bại. Vui lòng thử lại sau."
   },
   "suggestion": {
     "title": "Hộp thư góp ý ẩn danh",

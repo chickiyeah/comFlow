@@ -734,7 +734,11 @@
     "errResumeCreate": "创建简历时发生错误。",
     "errPdfDownload": "下载 PDF 时发生错误。",
     "errCompanyJobRequired": "请先输入公司名称和职位。",
-    "errCoverLetterGenerate": "生成求职信时发生错误。"
+    "errCoverLetterGenerate": "生成求职信时发生错误。",
+    "aiGenerateResume": "用 AI 生成简历",
+    "generatingResume": "生成中…",
+    "honestyFixed": "诚信自动修正",
+    "errResumeGenerate": "AI 生成失败，请稍后重试。"
   },
   "suggestion": {
     "title": "匿名建议箱",

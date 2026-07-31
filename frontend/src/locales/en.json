@@ -734,7 +734,11 @@
     "errResumeCreate": "An error occurred while creating the resume.",
     "errPdfDownload": "An error occurred while downloading the PDF.",
     "errCompanyJobRequired": "Please enter the company name and position first.",
-    "errCoverLetterGenerate": "An error occurred while generating the cover letter."
+    "errCoverLetterGenerate": "An error occurred while generating the cover letter.",
+    "aiGenerateResume": "Generate resume with AI",
+    "generatingResume": "Generating…",
+    "honestyFixed": "Honesty auto-fixes",
+    "errResumeGenerate": "Failed to generate with AI. Please try again shortly."
   },
   "suggestion": {
     "title": "Anonymous Suggestion Box",
