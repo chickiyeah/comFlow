@@ -3,6 +3,7 @@ package com.campusflow.domain.resume.controller;
 import com.campusflow.domain.resume.dto.ResumeRequest;
 import com.campusflow.domain.resume.dto.ResumeResponse;
 import com.campusflow.domain.resume.service.PdfService;
+import com.campusflow.domain.resume.service.ResumeAiGeneratorService;
 import com.campusflow.domain.resume.service.ResumeService;
 import com.campusflow.global.response.ApiResponse;
 import jakarta.validation.Valid;
@@ -25,6 +26,14 @@ public class ResumeController {
 
     private final ResumeService resumeService;
     private final PdfService pdfService;
+    private final ResumeAiGeneratorService generatorService;
+
+    @PostMapping("/generate")
+    public ApiResponse<com.campusflow.domain.resume.dto.ResumeDraft> generate(
+            @AuthenticationPrincipal String username,
+            @RequestParam(required = false, defaultValue = "general") String template) {
+        return ApiResponse.ok(generatorService.generate(username, template));
+    }
 
     @GetMapping
     public ApiResponse<List<ResumeResponse>> getMyResumes(@AuthenticationPrincipal String username) {
