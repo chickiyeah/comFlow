@@ -383,10 +383,31 @@ export default function Technical() {
     }
   }
 
+  // 생성된 이력서를 폼에서 편집(스킬·희망직무·자소서 본문)했을 때 그 편집값을
+  // resumeData JSON에 다시 반영한다. PDF는 resumeData만 렌더하므로 이 동기화가
+  // 없으면 편집 전 원본이 PDF에 나온다. (자소서 섹션 구조 편집기는 Plan 2에서)
+  const syncEditsIntoResumeData = (form) => {
+    if (!form.resumeData) return form.resumeData
+    let d
+    try { d = JSON.parse(form.resumeData) } catch { return form.resumeData }
+    const items = (form.skills || '').split(',').map(s => s.trim()).filter(Boolean)
+    d.skills = items.length ? [{ category: '보유 기술', items }] : []
+    d.targetJob = form.targetJob || d.targetJob || ''
+    // 자소서 본문은 "[문항]\n본문" 을 빈 줄로 구분한 형식(handleGenerateResume) → 역파싱
+    const blocks = (form.summary || '').split(/\n\s*\n/).map(b => b.trim()).filter(Boolean)
+    const sections = []
+    for (const b of blocks) {
+      const m = b.match(/^\[([^\]]+)\]\s*\n?([\s\S]*)$/)
+      if (m) sections.push({ question: m[1].trim(), body: m[2].trim(), charCount: m[2].trim().length })
+    }
+    if (sections.length) d.coverLetter = sections
+    return JSON.stringify(d)
+  }
+
   const handleCreateResume = async (e) => {
     e.preventDefault()
     try {
-      await createResume({ ...resumeForm, portfolioIds: portfolios.slice(0, 3).map(p => p.id) })
+      await createResume({ ...resumeForm, resumeData: syncEditsIntoResumeData(resumeForm), portfolioIds: portfolios.slice(0, 3).map(p => p.id) })
       setShowResumeForm(false)
       setResumeForm({ title: '', summary: '', skills: '', targetJob: '', portfolioIds: [], resumeData: '', template: '' })
       setHonestyFixes([])
