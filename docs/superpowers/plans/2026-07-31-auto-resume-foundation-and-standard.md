@@ -1259,7 +1259,7 @@ class ResumeGenerateControllerTest {
     void generate가_초안을_반환한다() throws Exception {
         ResumeData data = new ResumeData(
                 new ResumeData.Personal("홍길동", null, null, null),
-                null, List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
+                null, "백엔드", List.of(), List.of(), List.of(), List.of(), List.of(), List.of(),
                 List.of(new ResumeData.CoverLetterSection("지원동기", "본문", 2)),
                 new ResumeData.Meta("general", null, new HonestyReport(List.of())));
         when(generatorService.generate(any(), eq("general")))
@@ -1345,6 +1345,7 @@ class PdfServiceRichTest {
         ResumeData data = new ResumeData(
                 new ResumeData.Personal("홍길동", "201918023", "h@x", "010-0000-0000"),
                 new ResumeData.Education("컴퓨터정보과", 2, 1, 4.05),
+                "백엔드 개발자",
                 List.of(new ResumeData.SkillGroup("보유 기술", List.of("Java", "Spring"))),
                 List.of(new ResumeData.ProjectEntry("캠퍼스플로우", "2025", List.of("Spring"),
                         "백엔드", null, null, "학과 관리 시스템", "https://github.com/x", null)),
@@ -1402,6 +1403,8 @@ Expected: FAIL — `generateResumePdf(ResumeResponse, ResumeData, String)` 오�
              th:text="|${data.personal().email()} · ${data.personal().phone()}|">contact</div>
         <div class="meta" th:if="${data.education() != null}"
              th:text="|${data.education().department()} ${data.education().grade()}학년 ${data.education().semester()}학기|">학력</div>
+        <div class="meta" th:if="${data.targetJob() != null and !data.targetJob().isEmpty()}"
+             th:text="|희망 직무: ${data.targetJob()}|">희망직무</div>
     </div>
 
     <div class="section" th:if="${data.skills() != null and !data.skills().isEmpty()}">
