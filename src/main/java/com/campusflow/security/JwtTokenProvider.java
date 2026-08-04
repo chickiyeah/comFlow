@@ -27,12 +27,13 @@ public class JwtTokenProvider {
         this.expirationMs = expirationMs;
     }
 
-    public String generateToken(Authentication authentication) {
+    public String generateToken(Authentication authentication, String jti) {
         String roles = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.joining(","));
 
         return Jwts.builder()
+                .id(jti)
                 .subject(authentication.getName())
                 .claim("roles", roles)
                 .issuedAt(new Date())
@@ -43,6 +44,10 @@ public class JwtTokenProvider {
 
     public String getUsername(String token) {
         return parseClaims(token).getSubject();
+    }
+
+    public String getJti(String token) {
+        return parseClaims(token).getId();
     }
 
     public String getRoles(String token) {

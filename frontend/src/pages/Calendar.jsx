@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import Layout from '../components/layout/Layout'
 import { getCalendarEvents } from '../api/calendar'
 
 const TYPE_COLOR = {
-  LECTURE:   { bg: 'bg-primary/10 dark:bg-primary/20',   text: 'text-primary dark:text-blue-300',   label: '강의' },
-  NOTICE:    { bg: 'bg-red-50 dark:bg-red-900/20',       text: 'text-red-600 dark:text-red-400',    label: '공지' },
-  CERT_EXAM: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-700 dark:text-yellow-400', label: '자격증' },
+  LECTURE:   { bg: 'bg-primary/10 dark:bg-primary/20',   text: 'text-primary dark:text-blue-300',   labelKey: 'lecture' },
+  NOTICE:    { bg: 'bg-red-50 dark:bg-red-900/20',       text: 'text-red-600 dark:text-red-400',    labelKey: 'notice' },
+  CERT_EXAM: { bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-700 dark:text-yellow-400', labelKey: 'cert' },
 }
 
 export default function Calendar() {
+  const { t } = useTranslation()
   const now = new Date()
   const [year, setYear]   = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -50,14 +52,14 @@ export default function Calendar() {
         <div className="flex items-center justify-between mb-6">
           <h1 className="font-['Space_Grotesk'] text-2xl font-bold text-primary dark:text-white flex items-center gap-2">
             <span className="material-symbols-outlined text-secondary-fixed">calendar_month</span>
-            통합 캘린더
+            {t('calendar.title')}
           </h1>
           <div className="flex items-center gap-3">
             <button onClick={prevMonth} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
               <span className="material-symbols-outlined">chevron_left</span>
             </button>
             <span className="font-bold text-primary dark:text-white text-lg min-w-[120px] text-center">
-              {year}년 {month}월
+              {t('calendar.yearMonth', { year, month })}
             </span>
             <button onClick={nextMonth} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
               <span className="material-symbols-outlined">chevron_right</span>
@@ -68,19 +70,19 @@ export default function Calendar() {
         {/* 범례 */}
         <div className="flex gap-4 mb-4 text-xs">
           {Object.entries(TYPE_COLOR).map(([k, v]) => (
-            <span key={k} className={`px-2 py-1 rounded-full font-medium ${v.bg} ${v.text}`}>{v.label}</span>
+            <span key={k} className={`px-2 py-1 rounded-full font-medium ${v.bg} ${v.text}`}>{t(`calendar.type.${v.labelKey}`)}</span>
           ))}
         </div>
 
         {/* 달력 */}
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm">
           <div className="grid grid-cols-7 border-b border-slate-100 dark:border-slate-800">
-            {['일','월','화','수','목','금','토'].map((d,i) => (
-              <div key={d} className={`py-2 text-center text-xs font-bold ${i===0?'text-red-500':i===6?'text-blue-500':'text-outline dark:text-slate-400'}`}>{d}</div>
+            {['sun','mon','tue','wed','thu','fri','sat'].map((d,i) => (
+              <div key={d} className={`py-2 text-center text-xs font-bold ${i===0?'text-red-500':i===6?'text-blue-500':'text-outline dark:text-slate-400'}`}>{t(`calendar.weekday.${d}`)}</div>
             ))}
           </div>
           {loading ? (
-            <div className="py-20 text-center text-outline dark:text-slate-500">불러오는 중…</div>
+            <div className="py-20 text-center text-outline dark:text-slate-500">{t('common.loading')}</div>
           ) : (
             <div className="grid grid-cols-7">
               {cells.map((day, idx) => {
@@ -106,7 +108,7 @@ export default function Calendar() {
                         )
                       })}
                       {dayEvents.length > 3 && (
-                        <div className="text-[9px] text-outline dark:text-slate-500">+{dayEvents.length-3}개</div>
+                        <div className="text-[9px] text-outline dark:text-slate-500">{t('calendar.more', { count: dayEvents.length-3 })}</div>
                       )}
                     </div>
                   </div>
@@ -116,10 +118,15 @@ export default function Calendar() {
           )}
         </div>
 
+        {/* 일정 없음 안내 */}
+        {!loading && events.length === 0 && (
+          <p className="text-center text-outline dark:text-slate-500 py-8 text-sm">{t('calendar.empty')}</p>
+        )}
+
         {/* 이번 달 일정 리스트 */}
         {events.length > 0 && (
           <div className="mt-6">
-            <h2 className="font-bold text-primary dark:text-white mb-3">{month}월 전체 일정</h2>
+            <h2 className="font-bold text-primary dark:text-white mb-3">{t('calendar.allEvents', { month })}</h2>
             <div className="space-y-2">
               {Object.entries(byDate).sort().map(([date, evs]) => (
                 <div key={date} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 p-4">
@@ -131,7 +138,7 @@ export default function Calendar() {
                       const style = TYPE_COLOR[e.type] || TYPE_COLOR.LECTURE
                       return (
                         <div key={i} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${style.bg}`}>
-                          <span className={`text-xs font-bold ${style.text}`}>{TYPE_COLOR[e.type]?.label}</span>
+                          <span className={`text-xs font-bold ${style.text}`}>{t(`calendar.type.${style.labelKey}`)}</span>
                           <span className={`text-sm ${style.text}`}>{e.title}</span>
                           {e.description && <span className="text-xs text-outline dark:text-slate-500 ml-auto">{e.description}</span>}
                         </div>

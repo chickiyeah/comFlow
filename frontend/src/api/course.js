@@ -1,0 +1,15 @@
+import api from './axios'
+
+export const getCourses     = ()        => api.get('/courses')
+export const getCourse      = (id)      => api.get(`/courses/${id}`)
+export const createCourse   = (data)    => api.post('/courses', data)
+export const updateCourse   = (id, data)=> api.put(`/courses/${id}`, data)
+export const deleteCourse   = (id)      => api.delete(`/courses/${id}`)
+export const recordCourseView = (id)    => api.post(`/courses/${id}/view`)
+export const completeCourse    = (id)    => api.post(`/courses/${id}/complete`)
+export const saveCourseProgress = (id, data) => api.post(`/courses/${id}/progress`, data)
+export const getMyCourseProgress = () => api.get('/courses/my-progress')
+export const downloadCertificate = (id) => api.get(`/courses/${id}/certificate`, { responseType: 'blob' })
+export const getCourseComments = (id)    => api.get(`/courses/${id}/comments`)
+export const addCourseComment  = (id, data) => api.post(`/courses/${id}/comments`, data)
+export const deleteCourseComment = (commentId) => api.delete(`/courses/comments/${commentId}`)

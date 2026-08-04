@@ -6,6 +6,7 @@ import com.campusflow.domain.user.repository.EmailVerificationRepository;
 import com.campusflow.global.exception.BusinessException;
 import com.campusflow.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class EmailVerificationService {
@@ -58,6 +60,7 @@ public class EmailVerificationService {
             helper.setText(buildHtml(code), true);
             mailSender.send(message);
         } catch (Exception e) {
+            log.error("[Email] 발송 실패 to={} from={} host=mail : {}", to, mailProperties.getFrom(), e.toString(), e);
             throw new BusinessException(ErrorCode.EMAIL_SEND_FAILED);
         }
     }

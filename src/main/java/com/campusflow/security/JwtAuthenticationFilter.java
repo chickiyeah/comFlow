@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import com.campusflow.domain.session.service.UserSessionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -18,7 +19,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    public static final String JTI_ATTR = "sessionJti";
+
     private final JwtTokenProvider tokenProvider;
+    private final UserSessionService sessionService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -27,16 +31,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = resolveToken(request);
 
         if (StringUtils.hasText(token) && tokenProvider.validateToken(token)) {
-            String username = tokenProvider.getUsername(token);
-            String roles = tokenProvider.getRoles(token);
+            String jti = tokenProvider.getJti(token);
 
-            List<SimpleGrantedAuthority> authorities = Arrays.stream(roles.split(","))
-                    .map(SimpleGrantedAuthority::new)
-                    .toList();
+            // 세션(기기)이 폐기되었으면 인증하지 않음 → 원격 로그아웃 즉시 반영
+            if (sessionService.validateAndTouch(jti)) {
+                String username = tokenProvider.getUsername(token);
+                String roles = tokenProvider.getRoles(token);
 
-            UsernamePasswordAuthenticationToken auth =
-                    new UsernamePasswordAuthenticationToken(username, null, authorities);
-            SecurityContextHolder.getContext().setAuthentication(auth);
+                List<SimpleGrantedAuthority> authorities = Arrays.stream(roles.split(","))
+                        .map(SimpleGrantedAuthority::new)
+                        .toList();
+
+                UsernamePasswordAuthenticationToken auth =
+                        new UsernamePasswordAuthenticationToken(username, null, authorities);
+                SecurityContextHolder.getContext().setAuthentication(auth);
+                request.setAttribute(JTI_ATTR, jti);
+            }
         }
 
         filterChain.doFilter(request, response);

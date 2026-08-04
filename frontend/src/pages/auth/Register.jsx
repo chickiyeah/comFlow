@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { register, sendEmailCode, verifyEmailCode } from '../../api/auth'
 import useThemeStore from '../../store/themeStore'
 import LanguagePicker from '../../components/common/LanguagePicker'
@@ -14,6 +15,7 @@ const BTN_OUTLINE = 'flex-1 py-3 border border-outline-variant dark:border-slate
 export default function Register() {
   const navigate = useNavigate()
   const { dark, toggle } = useThemeStore()
+  const { t } = useTranslation()
 
   const [step, setStep] = useState(STEP.ROLE)
   const [loading, setLoading] = useState(false)
@@ -43,35 +45,35 @@ export default function Register() {
 
   const handleSendCode = async () => {
     if (!form.email || !/\S+@\S+\.\S+/.test(form.email)) {
-      setError('올바른 이메일을 입력해주세요.'); return
+      setError(t('auth.invalidEmail')); return
     }
     setSendLoading(true); clearError()
     try {
       await sendEmailCode(form.email)
       setCodeSent(true); setVerified(false); setCodeInput('')
     } catch (err) {
-      setError(err?.message || '인증 코드 발송에 실패했습니다.')
+      setError(err?.message || t('auth.codeSendFailed'))
     } finally {
       setSendLoading(false)
     }
   }
 
   const handleVerifyCode = async () => {
-    if (codeInput.length !== 6) { setError('6자리 코드를 입력해주세요.'); return }
+    if (codeInput.length !== 6) { setError(t('auth.enterSixDigit')); return }
     setVerifyLoading(true); clearError()
     try {
       await verifyEmailCode(form.email, codeInput)
       setVerified(true)
     } catch (err) {
-      setError(err?.message || '인증 코드가 올바르지 않습니다.')
+      setError(err?.message || t('auth.codeInvalid'))
     } finally {
       setVerifyLoading(false)
     }
   }
 
   const handleSubmit = async () => {
-    if (form.password.length < 6) { setError('비밀번호는 6자 이상이어야 합니다.'); return }
-    if (form.password !== form.passwordConfirm) { setError('비밀번호가 일치하지 않습니다.'); return }
+    if (form.password.length < 6) { setError(t('auth.passwordTooShort')); return }
+    if (form.password !== form.passwordConfirm) { setError(t('auth.passwordMismatch')); return }
     setLoading(true); clearError()
     try {
       await register({
@@ -83,7 +85,7 @@ export default function Register() {
       })
       setDone(true)
     } catch (err) {
-      setError(err?.message || '회원가입에 실패했습니다.')
+      setError(err?.message || t('auth.signupFailed'))
     } finally {
       setLoading(false)
     }
@@ -104,8 +106,8 @@ export default function Register() {
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary dark:bg-primary-container mb-3">
             <span className="text-secondary-fixed font-black text-xl font-['Space_Grotesk']">CF</span>
           </div>
-          <h1 className="text-2xl font-black text-primary dark:text-white font-['Space_Grotesk']">회원가입</h1>
-          <p className="text-on-surface-variant dark:text-slate-400 text-sm mt-1">CampusFlow 계정을 만들어보세요.</p>
+          <h1 className="text-2xl font-black text-primary dark:text-white font-['Space_Grotesk']">{t('auth.register')}</h1>
+          <p className="text-on-surface-variant dark:text-slate-400 text-sm mt-1">{t('auth.registerSubtitle')}</p>
         </div>
 
         {!done && (
@@ -123,12 +125,12 @@ export default function Register() {
           {done ? (
             <div className="text-center py-4 space-y-4">
               <span className="material-symbols-outlined text-[64px] text-secondary dark:text-secondary-fixed">check_circle</span>
-              <p className="font-['Space_Grotesk'] text-xl font-bold text-primary dark:text-white">가입 완료!</p>
+              <p className="font-['Space_Grotesk'] text-xl font-bold text-primary dark:text-white">{t('auth.signupComplete')}</p>
               <p className="text-sm text-on-surface-variant dark:text-slate-400">
-                {form.name}님의 계정이 생성되었습니다.<br />이제 로그인하세요.
+                {t('auth.accountCreated', { name: form.name })}<br />{t('auth.nowLogin')}
               </p>
               <button onClick={() => navigate('/login')} className="w-full py-3 bg-primary dark:bg-primary-container text-white rounded-xl font-bold text-sm hover:scale-[1.02] active:scale-95 transition-transform">
-                로그인하러 가기
+                {t('auth.goToLogin')}
               </button>
             </div>
           ) : (
@@ -138,13 +140,13 @@ export default function Register() {
               {step === STEP.ROLE && (
                 <>
                   <div>
-                    <p className="font-['Space_Grotesk'] font-bold text-primary dark:text-white mb-1">구분 선택</p>
-                    <p className="text-label-md text-on-surface-variant dark:text-slate-400 mb-4">학생 또는 교수 / 교직원으로 가입합니다.</p>
+                    <p className="font-['Space_Grotesk'] font-bold text-primary dark:text-white mb-1">{t('auth.roleSelect')}</p>
+                    <p className="text-label-md text-on-surface-variant dark:text-slate-400 mb-4">{t('auth.roleSelectDesc')}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     {[
-                      { value: 'ROLE_STUDENT',   icon: 'school',      label: '학생',        sub: '학번으로 가입' },
-                      { value: 'ROLE_PROFESSOR',  icon: 'person_book', label: '교수/교직원', sub: '교번으로 가입' },
+                      { value: 'ROLE_STUDENT',   icon: 'school',      label: t('auth.roleStudent'),   sub: t('auth.roleStudentSub') },
+                      { value: 'ROLE_PROFESSOR',  icon: 'person_book', label: t('auth.roleProfessor'), sub: t('auth.roleProfessorSub') },
                     ].map(r => (
                       <button key={r.value} type="button" onClick={() => set('role', r.value)}
                         className={`p-5 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all active:scale-95 ${
@@ -166,25 +168,25 @@ export default function Register() {
               {step === STEP.INFO && (
                 <>
                   <div>
-                    <p className="font-['Space_Grotesk'] font-bold text-primary dark:text-white mb-1">기본 정보</p>
+                    <p className="font-['Space_Grotesk'] font-bold text-primary dark:text-white mb-1">{t('auth.basicInfo')}</p>
                     <p className="text-label-md text-on-surface-variant dark:text-slate-400">
-                      {form.role === 'ROLE_STUDENT' ? '학번과 이름을 입력하세요.' : '교번과 이름을 입력하세요.'}
+                      {form.role === 'ROLE_STUDENT' ? t('auth.infoDescStudent') : t('auth.infoDescProfessor')}
                     </p>
                   </div>
                   <div>
                     <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">
-                      {form.role === 'ROLE_STUDENT' ? '학번' : '교번'}
+                      {form.role === 'ROLE_STUDENT' ? t('auth.studentNo') : t('auth.professorNo')}
                     </label>
                     <input autoFocus type="text" value={form.username}
                       onChange={e => set('username', e.target.value)}
-                      placeholder={form.role === 'ROLE_STUDENT' ? '예: 2024010001' : '예: P2024001'}
+                      placeholder={form.role === 'ROLE_STUDENT' ? t('auth.studentNoPlaceholder') : t('auth.professorNoPlaceholder')}
                       className={INPUT_CLS} />
                   </div>
                   <div>
-                    <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">이름</label>
+                    <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">{t('auth.name')}</label>
                     <input type="text" value={form.name}
                       onChange={e => set('name', e.target.value)}
-                      placeholder="실명을 입력해주세요" className={INPUT_CLS} />
+                      placeholder={t('auth.namePlaceholder')} className={INPUT_CLS} />
                   </div>
                 </>
               )}
@@ -193,12 +195,12 @@ export default function Register() {
               {step === STEP.EMAIL && (
                 <>
                   <div>
-                    <p className="font-['Space_Grotesk'] font-bold text-primary dark:text-white mb-1">이메일 인증</p>
-                    <p className="text-label-md text-on-surface-variant dark:text-slate-400">학교 이메일로 인증 코드를 받으세요.</p>
+                    <p className="font-['Space_Grotesk'] font-bold text-primary dark:text-white mb-1">{t('auth.emailVerify')}</p>
+                    <p className="text-label-md text-on-surface-variant dark:text-slate-400">{t('auth.emailVerifyDesc')}</p>
                   </div>
 
                   <div>
-                    <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">이메일</label>
+                    <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">{t('auth.email')}</label>
                     <div className="flex gap-2">
                       <input type="email" value={form.email}
                         onChange={e => { set('email', e.target.value); setCodeSent(false); setVerified(false); clearError() }}
@@ -208,7 +210,7 @@ export default function Register() {
                       <button type="button" onClick={handleSendCode}
                         disabled={sendLoading || verified || !form.email}
                         className="px-4 py-3 bg-surface-container dark:bg-slate-700 text-primary dark:text-secondary-fixed rounded-xl text-label-md font-bold hover:bg-surface-container-high dark:hover:bg-slate-600 transition-colors disabled:opacity-40 whitespace-nowrap shrink-0">
-                        {sendLoading ? '발송 중...' : codeSent ? '재발송' : '코드 발송'}
+                        {sendLoading ? t('auth.sending') : codeSent ? t('auth.resend') : t('auth.sendCode')}
                       </button>
                     </div>
                   </div>
@@ -216,17 +218,17 @@ export default function Register() {
                   {codeSent && !verified && (
                     <div>
                       <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">
-                        인증 코드 <span className="text-outline dark:text-slate-500">(10분 내 입력)</span>
+                        {t('auth.verifyCode')} <span className="text-outline dark:text-slate-500">{t('auth.codeExpiry')}</span>
                       </label>
                       <div className="flex gap-2">
                         <input autoFocus type="text" value={codeInput}
                           onChange={e => { setCodeInput(e.target.value.replace(/\D/g, '').slice(0, 6)); clearError() }}
-                          placeholder="6자리 숫자" maxLength={6}
+                          placeholder={t('auth.sixDigitPlaceholder')} maxLength={6}
                           className={INPUT_CLS + ' tracking-[0.4em] text-center font-bold text-lg'} />
                         <button type="button" onClick={handleVerifyCode}
                           disabled={verifyLoading || codeInput.length !== 6}
                           className="px-4 py-3 bg-primary dark:bg-primary-container text-white rounded-xl text-label-md font-bold hover:scale-[1.02] active:scale-95 transition-transform disabled:opacity-40 whitespace-nowrap shrink-0">
-                          {verifyLoading ? '확인 중...' : '인증 확인'}
+                          {verifyLoading ? t('auth.verifying') : t('auth.verifyBtn')}
                         </button>
                       </div>
                     </div>
@@ -236,7 +238,7 @@ export default function Register() {
                     <div className="flex items-center gap-3 p-4 bg-secondary-container/20 dark:bg-secondary-fixed/10 rounded-xl border border-secondary-fixed/30">
                       <span className="material-symbols-outlined text-secondary dark:text-secondary-fixed text-2xl">verified</span>
                       <div>
-                        <p className="font-bold text-sm text-primary dark:text-white">이메일 인증 완료</p>
+                        <p className="font-bold text-sm text-primary dark:text-white">{t('auth.emailVerified')}</p>
                         <p className="text-label-md text-outline dark:text-slate-400">{form.email}</p>
                       </div>
                     </div>
@@ -248,38 +250,38 @@ export default function Register() {
               {step === STEP.PASSWORD && (
                 <>
                   <div>
-                    <p className="font-['Space_Grotesk'] font-bold text-primary dark:text-white mb-1">비밀번호 설정</p>
-                    <p className="text-label-md text-on-surface-variant dark:text-slate-400">6자 이상의 비밀번호를 설정하세요.</p>
+                    <p className="font-['Space_Grotesk'] font-bold text-primary dark:text-white mb-1">{t('auth.passwordSetup')}</p>
+                    <p className="text-label-md text-on-surface-variant dark:text-slate-400">{t('auth.passwordSetupDesc')}</p>
                   </div>
                   <div>
-                    <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">비밀번호</label>
+                    <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">{t('auth.password')}</label>
                     <input autoFocus type="password" value={form.password}
                       onChange={e => { set('password', e.target.value); clearError() }}
-                      placeholder="6자 이상 입력" className={INPUT_CLS} />
+                      placeholder={t('auth.passwordPlaceholder')} className={INPUT_CLS} />
                   </div>
                   <div>
-                    <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">비밀번호 확인</label>
+                    <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">{t('auth.confirmPassword')}</label>
                     <input type="password" value={form.passwordConfirm}
                       onChange={e => { set('passwordConfirm', e.target.value); clearError() }}
-                      placeholder="동일한 비밀번호 재입력"
+                      placeholder={t('auth.confirmPasswordPlaceholder')}
                       className={INPUT_CLS + (form.passwordConfirm && form.password !== form.passwordConfirm ? ' border-error' : '')} />
                     {form.passwordConfirm && form.password !== form.passwordConfirm && (
-                      <p className="text-[11px] text-error mt-1">비밀번호가 일치하지 않습니다.</p>
+                      <p className="text-[11px] text-error mt-1">{t('auth.passwordMismatch')}</p>
                     )}
                     {form.passwordConfirm && form.password === form.passwordConfirm && (
                       <p className="text-[11px] text-secondary dark:text-secondary-fixed mt-1 flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[13px]">check_circle</span>비밀번호가 일치합니다.
+                        <span className="material-symbols-outlined text-[13px]">check_circle</span>{t('auth.passwordMatch')}
                       </p>
                     )}
                   </div>
 
                   <div className="p-3 bg-surface-container-low dark:bg-slate-800 rounded-xl border border-outline-variant dark:border-slate-700 space-y-1.5">
-                    <p className="text-label-md text-on-surface-variant dark:text-slate-400 mb-1.5">입력 정보 확인</p>
+                    <p className="text-label-md text-on-surface-variant dark:text-slate-400 mb-1.5">{t('auth.reviewInfo')}</p>
                     {[
-                      { label: '구분',   val: form.role === 'ROLE_STUDENT' ? '학생' : '교수/교직원' },
-                      { label: form.role === 'ROLE_STUDENT' ? '학번' : '교번', val: form.username },
-                      { label: '이름',   val: form.name },
-                      { label: '이메일', val: form.email },
+                      { label: t('auth.roleLabel'), val: form.role === 'ROLE_STUDENT' ? t('auth.roleStudent') : t('auth.roleProfessor') },
+                      { label: form.role === 'ROLE_STUDENT' ? t('auth.studentNo') : t('auth.professorNo'), val: form.username },
+                      { label: t('auth.name'),  val: form.name },
+                      { label: t('auth.email'), val: form.email },
                     ].map(({ label, val }) => (
                       <div key={label} className="flex justify-between text-sm">
                         <span className="text-on-surface-variant dark:text-slate-400">{label}</span>
@@ -299,19 +301,19 @@ export default function Register() {
               <div className="flex gap-3 pt-1">
                 {step > STEP.ROLE && (
                   <button type="button" onClick={() => { setStep(s => s - 1); clearError() }} className={BTN_OUTLINE}>
-                    <span className="material-symbols-outlined text-[18px]">arrow_back</span>이전
+                    <span className="material-symbols-outlined text-[18px]">arrow_back</span>{t('auth.prev')}
                   </button>
                 )}
                 {step < STEP.PASSWORD ? (
                   <button type="button" disabled={!canNext()} onClick={() => { setStep(s => s + 1); clearError() }}
                     className={BTN_PRIMARY + ' flex items-center justify-center gap-1'}>
-                    다음<span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                    {t('auth.next')}<span className="material-symbols-outlined text-[18px]">arrow_forward</span>
                   </button>
                 ) : (
                   <button type="button" onClick={handleSubmit}
                     disabled={loading || !form.password || form.password !== form.passwordConfirm}
                     className={BTN_PRIMARY}>
-                    {loading ? '처리 중...' : '가입 완료'}
+                    {loading ? t('auth.processing') : t('auth.signupBtn')}
                   </button>
                 )}
               </div>
@@ -321,8 +323,8 @@ export default function Register() {
 
         {!done && (
           <p className="text-center text-sm text-on-surface-variant dark:text-slate-400 mt-6">
-            이미 계정이 있으신가요?{' '}
-            <Link to="/login" className="text-primary dark:text-secondary-fixed font-bold hover:underline">로그인</Link>
+            {t('auth.haveAccount')}{' '}
+            <Link to="/login" className="text-primary dark:text-secondary-fixed font-bold hover:underline">{t('auth.login')}</Link>
           </p>
         )}
       </div>

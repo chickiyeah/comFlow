@@ -1,0 +1,66 @@
+-- CampusFlow 데모: 성적 + 출결 시딩 (201918023 / 나경원)
+SET @sid = (SELECT id FROM students WHERE student_id = '201918023');
+
+-- ===== 성적 (2025-1, 2025-2, 2026-1) =====
+INSERT INTO grades (student_id, subject_name, subject_code, credits, letter_grade, grade_point, grade_year, grade_semester) VALUES
+(@sid,'프로그래밍기초','CS101',3,'A+',4.5,2025,1),
+(@sid,'컴퓨터구조','CS102',3,'A0',4.0,2025,1),
+(@sid,'디지털논리회로','CS103',3,'B+',3.5,2025,1),
+(@sid,'대학영어','GE101',2,'A0',4.0,2025,1),
+(@sid,'웹기초','CS104',3,'A+',4.5,2025,1),
+(@sid,'일반수학','GE102',3,'B+',3.5,2025,1),
+(@sid,'자료구조','CS111',3,'A+',4.5,2025,2),
+(@sid,'객체지향기초','CS112',3,'A0',4.0,2025,2),
+(@sid,'데이터베이스기초','CS113',3,'A+',4.5,2025,2),
+(@sid,'운영체제','CS114',3,'B+',3.5,2025,2),
+(@sid,'네트워크기초','CS115',3,'A0',4.0,2025,2),
+(@sid,'확률과통계','GE103',3,'B0',3.0,2025,2),
+(@sid,'데이터베이스','CS202',3,'A+',4.5,2026,1),
+(@sid,'객체지향프로그래밍','CS201',3,'A0',4.0,2026,1),
+(@sid,'AI프롬프트엔지니어링','AI201',3,'A+',4.5,2026,1),
+(@sid,'해킹및침해대응','SEC101',3,'B+',3.5,2026,1),
+(@sid,'웹프로그래밍','CS204',3,'A0',4.0,2026,1),
+(@sid,'알고리즘','CS203',3,'A+',4.5,2026,1),
+(@sid,'캡스톤디자인','CS210',3,'A+',4.5,2026,1);
+
+-- ===== 출결 (2026-1 현재 과목, 출석률 ~92%) =====
+INSERT INTO attendances (student_id, subject_name, attendance_date, status, note) VALUES
+(@sid,'객체지향프로그래밍','2026-03-09','PRESENT',NULL),
+(@sid,'객체지향프로그래밍','2026-03-16','PRESENT',NULL),
+(@sid,'객체지향프로그래밍','2026-03-23','PRESENT',NULL),
+(@sid,'객체지향프로그래밍','2026-03-30','LATE',NULL),
+(@sid,'객체지향프로그래밍','2026-04-06','PRESENT',NULL),
+(@sid,'객체지향프로그래밍','2026-04-13','PRESENT',NULL),
+(@sid,'데이터베이스','2026-03-09','PRESENT',NULL),
+(@sid,'데이터베이스','2026-03-16','PRESENT',NULL),
+(@sid,'데이터베이스','2026-03-23','PRESENT',NULL),
+(@sid,'데이터베이스','2026-03-30','PRESENT',NULL),
+(@sid,'데이터베이스','2026-04-06','ABSENT','개인사정'),
+(@sid,'데이터베이스','2026-04-13','PRESENT',NULL),
+(@sid,'알고리즘','2026-03-10','PRESENT',NULL),
+(@sid,'알고리즘','2026-03-17','PRESENT',NULL),
+(@sid,'알고리즘','2026-03-24','PRESENT',NULL),
+(@sid,'알고리즘','2026-03-31','PRESENT',NULL),
+(@sid,'알고리즘','2026-04-07','PRESENT',NULL),
+(@sid,'AI프롬프트엔지니어링','2026-03-11','PRESENT',NULL),
+(@sid,'AI프롬프트엔지니어링','2026-03-18','PRESENT',NULL),
+(@sid,'AI프롬프트엔지니어링','2026-03-25','PRESENT',NULL),
+(@sid,'AI프롬프트엔지니어링','2026-04-01','LATE',NULL),
+(@sid,'AI프롬프트엔지니어링','2026-04-08','PRESENT',NULL),
+(@sid,'해킹및침해대응','2026-03-11','PRESENT',NULL),
+(@sid,'해킹및침해대응','2026-03-18','PRESENT',NULL),
+(@sid,'해킹및침해대응','2026-03-25','PRESENT',NULL),
+(@sid,'해킹및침해대응','2026-04-01','PRESENT',NULL),
+(@sid,'해킹및침해대응','2026-04-08','EXCUSED','공결(교내대회)'),
+(@sid,'웹프로그래밍','2026-03-12','PRESENT',NULL),
+(@sid,'웹프로그래밍','2026-03-19','PRESENT',NULL),
+(@sid,'웹프로그래밍','2026-03-26','PRESENT',NULL),
+(@sid,'웹프로그래밍','2026-04-02','PRESENT',NULL),
+(@sid,'캡스톤디자인','2026-03-13','PRESENT',NULL),
+(@sid,'캡스톤디자인','2026-03-20','PRESENT',NULL),
+(@sid,'캡스톤디자인','2026-03-27','PRESENT',NULL),
+(@sid,'캡스톤디자인','2026-04-03','PRESENT',NULL);
+
+SELECT (SELECT COUNT(*) FROM grades WHERE student_id=@sid) AS grade_rows,
+       (SELECT COUNT(*) FROM attendances WHERE student_id=@sid) AS attend_rows,
+       @sid AS student_id;

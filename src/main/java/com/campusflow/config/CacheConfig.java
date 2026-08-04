@@ -28,6 +28,9 @@ public class CacheConfig {
                 // AI 로드맵 — 직업명 기준 캐시 (1시간)
                 build("roadmaps",       200, 1,  TimeUnit.HOURS),
 
+                // 취업 통계 — 직무명 기준 캐시 (1시간)
+                build("jobStatistics",  200, 1,  TimeUnit.HOURS),
+
                 // AI 응답 캐싱 — AiFacadeService (세맨틱 캐싱 간소화 버전)
                 build("aiResponses",    200, 30, TimeUnit.MINUTES),
 

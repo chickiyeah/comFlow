@@ -1,6 +1,7 @@
 package com.campusflow.domain.profile.controller;
 
 import com.campusflow.domain.profile.dto.AcademicUpdateRequest;
+import com.campusflow.domain.profile.dto.DesiredJobRequest;
 import com.campusflow.domain.profile.dto.ProfileResponse;
 import com.campusflow.domain.profile.dto.SyncRequest;
 import com.campusflow.domain.profile.service.ProfileSyncService;
@@ -41,6 +42,14 @@ public class ProfileController {
             @AuthenticationPrincipal String username,
             @Valid @RequestBody AcademicUpdateRequest request) {
         return ApiResponse.ok(profileSyncService.updateAcademic(username, request.grade(), request.semester()));
+    }
+
+    /** 희망 직무 수정 (취업 통계 기준) */
+    @PutMapping("/desired-job")
+    public ApiResponse<ProfileResponse> updateDesiredJob(
+            @AuthenticationPrincipal String username,
+            @Valid @RequestBody DesiredJobRequest request) {
+        return ApiResponse.ok(profileSyncService.updateDesiredJob(username, request.desiredJob()));
     }
 
     /** 연동 비활성화 */

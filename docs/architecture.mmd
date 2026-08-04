@@ -1,0 +1,57 @@
+%% CampusFlow 시스템 아키텍처 — mermaid.live 에 붙여넣으면 렌더/PNG·SVG 내보내기 가능
+flowchart TB
+  subgraph U["👤 사용자"]
+    direction LR
+    U1[학생]:::u --- U2[교수]:::u --- U3[관리자]:::u
+  end
+
+  subgraph FE["🖥 프론트엔드 (Web)"]
+    direction LR
+    F1[React 18 + Vite]:::c
+    F2[Tailwind CSS]:::c
+    F3[react-i18next · 5개 언어]:::c
+    F4[axios · JWT]:::c
+  end
+
+  subgraph BE["⚙ 백엔드 · Spring Boot 3.3.5 / Java 17"]
+    direction TB
+    B0[Spring Security+JWT · REST Controller · Service · JPA/Hibernate]:::c
+    subgraph DOM[" "]
+      direction LR
+      D1[학사<br/>성적·출결·졸업요건]:::d
+      D2[취업<br/>AI자소서·채용·로드맵·자격증]:::d
+      D3[포트폴리오·이력서<br/>GitHub·PDF]:::d
+      D4[LMS<br/>퀴즈·AI채점·게임화·수료증]:::d
+      D5[AI 학생 어드바이저]:::d
+    end
+  end
+
+  subgraph AI["🤖 AI 계층"]
+    direction LR
+    A1[① jvision.ai<br/>자체 vLLM]:::ai --> A2[② Ollama<br/>로컬 LLM]:::ai --> A3[③ Gemini<br/>상용 API]:::ai
+    RAG[KomjeongRagService · RAG<br/>학과자료 35K 청크]:::ai
+  end
+
+  DB[(MySQL 8<br/>통합 데이터베이스)]:::db
+
+  subgraph EX["🔌 외부 연동"]
+    direction LR
+    E1[채용 API<br/>고용24·잡코리아·사람인·워크넷]:::e
+    E2[Q-Net<br/>자격증]:::e
+    E3[학교 포털<br/>성적·출결]:::e
+    E4[GitHub API<br/>포트폴리오]:::e
+    E5[메일 서버<br/>이메일 인증]:::e
+  end
+
+  U -->|HTTPS| FE -->|REST/JSON| BE
+  BE --> AI
+  BE --> DB
+  BE --> EX
+  AI -. 근거 기반 로드맵 .-> BE
+
+  classDef u  fill:#dbe7ff,stroke:#00236f,color:#12305f;
+  classDef c  fill:#ffffff,stroke:#9db6e6,color:#12305f;
+  classDef d  fill:#dbe7ff,stroke:#a9c0ec,color:#12305f;
+  classDef ai fill:#f4fbe6,stroke:#7bb032,color:#12305f;
+  classDef db fill:#eef3ff,stroke:#00236f,color:#12305f;
+  classDef e  fill:#eaf0fb,stroke:#1b4db3,color:#12305f;

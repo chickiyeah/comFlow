@@ -36,6 +36,7 @@ public class AssistantService {
 
     private final AiFacadeService aiFacadeService;
     private final ObjectMapper objectMapper;
+    private final com.campusflow.domain.career.service.EmploymentStatService employmentStatService;
 
     private final UserRepository userRepository;
     private final StudentRepository studentRepository;
@@ -100,6 +101,9 @@ public class AssistantService {
         int currentSemester = (student.getGrade() - 1) * 2 + student.getSemester();
         int remainingSemesters = Math.max(0, 4 - currentSemester);
 
+        // 4-2. 희망 직무 (취업 통계 연계)
+        String desiredJob = student.getDesiredJob();
+
         // 5. AI에 전달할 컨텍스트 구성
         String context = String.format("""
                 학생 정보:
@@ -113,6 +117,8 @@ public class AssistantService {
                 - 결석 경고 과목: %s
                 - 졸업요건 현황: %s
                 - 등록된 포트폴리오: %d개
+                - 희망 직무: %s
+                위 학생의 희망 직무가 있으면 그 직무 취업에 직접 도움이 되는 방향으로 자격증·집중 과목·포트폴리오 아이디어를 추천하세요.
                 """,
                 student.getName(), student.getDepartment(),
                 student.getGrade(), student.getSemester(),
@@ -122,14 +128,32 @@ public class AssistantService {
                 absences, lates,
                 absenceWarnings.isEmpty() ? "없음" : String.join(", ", absenceWarnings),
                 gradStatus,
-                portfolioCount
+                portfolioCount,
+                (desiredJob != null && !desiredJob.isBlank()) ? desiredJob : "미설정"
         );
 
         // 6. AI 호출
         String raw = aiFacadeService.ask(SYSTEM_PROMPT,
                 "다음 학생 데이터를 분석하여 맞춤 추천을 JSON으로 제공하세요:\n\n" + context);
 
-        return parseResponse(raw, student, gpa, currentSemester, remainingSemesters, absenceWarnings, requirements, earnedByName);
+        // 6-1. 희망 직무 기반 취업 시장 정보 (취업 통계 연계, best-effort)
+        AssistantResponse.CareerStat careerStat = null;
+        if (desiredJob != null && !desiredJob.isBlank()) {
+            try {
+                var stats = employmentStatService.getStatistics(username, null);
+                if (stats.aiInsight() != null) {
+                    careerStat = new AssistantResponse.CareerStat(
+                            stats.aiInsight().expectedSalary(),
+                            stats.aiInsight().requiredEducation(),
+                            stats.aiInsight().recommendedCerts());
+                }
+            } catch (Exception e) {
+                log.warn("어드바이저 취업통계 연계 실패: {}", e.getMessage());
+            }
+        }
+
+        return parseResponse(raw, student, gpa, currentSemester, remainingSemesters,
+                absenceWarnings, requirements, earnedByName, desiredJob, careerStat);
     }
 
     @SuppressWarnings("unchecked")
@@ -137,7 +161,9 @@ public class AssistantService {
                                              int currentSemester, int remainingSemesters,
                                              List<String> absenceWarnings,
                                              List<?> requirements,
-                                             Map<String, Integer> earnedByName) {
+                                             Map<String, Integer> earnedByName,
+                                             String desiredJob,
+                                             AssistantResponse.CareerStat careerStat) {
         try {
             String json = raw.trim().replaceAll("(?s)```json?\\s*", "").replaceAll("```\\s*$", "").trim();
             Map<String, Object> map = objectMapper.readValue(json, new TypeReference<>() {});
@@ -176,13 +202,15 @@ public class AssistantService {
             return new AssistantResponse(
                     student.getName(), currentSemester, remainingSemesters,
                     gpa != null ? Math.round(gpa * 100.0) / 100.0 : 0.0,
-                    overallAdvice, studyFocus, certs, portfolioIdeas, gradWarnings, attWarnings
+                    overallAdvice, studyFocus, certs, portfolioIdeas, gradWarnings, attWarnings,
+                    desiredJob, careerStat
             );
         } catch (Exception e) {
             log.warn("AI 응답 파싱 실패: {}", e.getMessage());
             return new AssistantResponse(student.getName(), currentSemester, remainingSemesters,
                     gpa != null ? gpa : 0.0,
-                    "데이터 분석 중 오류가 발생했습니다.", List.of(), List.of(), List.of(), List.of(), List.of());
+                    "데이터 분석 중 오류가 발생했습니다.", List.of(), List.of(), List.of(), List.of(), List.of(),
+                    desiredJob, careerStat);
         }
     }
 

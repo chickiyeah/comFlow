@@ -176,6 +176,13 @@ public class ProfileSyncService {
     }
 
     @Transactional
+    public ProfileResponse updateDesiredJob(String username, String desiredJob) {
+        Student student = getStudent(username);
+        student.updateDesiredJob(desiredJob);
+        return ProfileResponse.from(student);
+    }
+
+    @Transactional
     public ProfileResponse disableSync(String username) {
         Student student = getStudent(username);
         student.disableIntranetSync();

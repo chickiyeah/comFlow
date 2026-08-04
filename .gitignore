@@ -8,3 +8,9 @@ target/
 .vscode/
 *.log
 frontend/node_modules
+
+# scratch / build output / python caches
+.superpowers/
+frontend/dist/
+__pycache__/
+*.pyc

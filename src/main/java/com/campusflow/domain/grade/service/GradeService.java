@@ -13,7 +13,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +38,26 @@ public class GradeService {
                 totalCredits,
                 grades.stream().map(GradeResponse::from).toList()
         );
+    }
+
+    /** 성적증명서 PDF용 모델 */
+    public Map<String, Object> getTranscriptModel(String username) {
+        Student student = getStudentByUsername(username);
+        List<Grade> grades = gradeRepository.findByStudentIdOrderByGradeYearAscGradeSemesterAsc(student.getId());
+        Double gpa = gradeRepository.calculateGpa(student.getId());
+        int totalCredits = grades.stream().mapToInt(Grade::getCredits).sum();
+
+        Map<String, Object> m = new HashMap<>();
+        m.put("docTitle", "성적증명서");
+        m.put("name", student.getName());
+        m.put("studentId", student.getStudentId());
+        m.put("department", student.getDepartment());
+        m.put("gradeSemester", student.getGrade() + "학년 " + student.getSemester() + "학기");
+        m.put("grades", grades.stream().map(GradeResponse::from).toList());
+        m.put("gpa", gpa != null ? Math.round(gpa * 100.0) / 100.0 : 0.0);
+        m.put("totalCredits", totalCredits);
+        m.put("issuedDate", LocalDate.now().toString());
+        return m;
     }
 
     public List<GradeResponse> getGradesBySemester(String username, int year, int semester) {

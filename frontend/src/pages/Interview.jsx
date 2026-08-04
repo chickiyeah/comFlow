@@ -15,19 +15,19 @@ export default function Interview() {
   const [tab, setTab] = useState(TAB_NEW)
 
   return (
-    <Layout title="가상 면접">
+    <Layout title={t('interview.title')}>
     <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
       <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-medium text-primary dark:text-white">가상 면접</h1>
-        <span className="chip">AI 면접관</span>
+        <h1 className="text-2xl font-medium text-primary dark:text-white">{t('interview.title')}</h1>
+        <span className="chip">{t('interview.interviewerChip')}</span>
       </div>
       <p className="text-sm text-slate-500 dark:text-slate-400">
-        내 포트폴리오를 분석해 실전 면접 질문을 생성합니다. 지원하고 싶은 직장을 선택하거나 직접 입력하세요.
+        {t('interview.description')}
       </p>
 
       {/* 탭 */}
       <div className="flex gap-2 border-b border-slate-200 dark:border-slate-700 pb-1">
-        {[{ key: TAB_NEW, label: '새 면접 시작' }, { key: TAB_HISTORY, label: '면접 기록' }].map(({ key, label }) => (
+        {[{ key: TAB_NEW, label: t('interview.tabNew') }, { key: TAB_HISTORY, label: t('interview.tabHistory') }].map(({ key, label }) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -53,6 +53,7 @@ export default function Interview() {
 // 새 면접 시작 패널
 // ──────────────────────────────────────────────────────────────
 function NewInterviewPanel() {
+  const { t } = useTranslation()
   const [phase, setPhase]         = useState('setup')   // setup | interviewing | result
   const [savedJobs, setSavedJobs] = useState([])
   const [selectedJob, setSelectedJob] = useState(null)
@@ -67,6 +68,43 @@ function NewInterviewPanel() {
   const [result, setResult] = useState(null)       // SessionDetail
   const bottomRef = useRef(null)
 
+  // ── 음성: TTS(질문 읽기) + STT(음성 답변) ──
+  const [listening, setListening] = useState(false)
+  const [ttsOn, setTtsOn] = useState(true)
+  const recognitionRef = useRef(null)
+  const ttsOnRef = useRef(true)
+  useEffect(() => { ttsOnRef.current = ttsOn }, [ttsOn])
+  useEffect(() => () => { try { window.speechSynthesis?.cancel(); recognitionRef.current?.stop() } catch {} }, [])
+
+  const speak = (text) => {
+    if (!ttsOnRef.current || !window.speechSynthesis || !text) return
+    try {
+      window.speechSynthesis.cancel()
+      const u = new SpeechSynthesisUtterance(text)
+      u.lang = 'ko-KR'; u.rate = 1.0
+      window.speechSynthesis.speak(u)
+    } catch { /* ignore */ }
+  }
+  const stopSpeak = () => { try { window.speechSynthesis?.cancel() } catch {} }
+
+  const toggleMic = () => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SR) { alert(t('interview.sttUnsupported')); return }
+    if (listening) { recognitionRef.current?.stop(); return }
+    stopSpeak()
+    const rec = new SR()
+    rec.lang = 'ko-KR'; rec.interimResults = true; rec.continuous = true
+    rec.onresult = (e) => {
+      let txt = ''
+      for (let i = 0; i < e.results.length; i++) txt += e.results[i][0].transcript
+      setInputText(txt)
+    }
+    rec.onend = () => setListening(false)
+    rec.onerror = () => setListening(false)
+    recognitionRef.current = rec
+    try { rec.start(); setListening(true) } catch { setListening(false) }
+  }
+
   useEffect(() => {
     api.get('/career/saved-jobs').then(r => {
       setSavedJobs(r.data || [])
@@ -80,7 +118,7 @@ function NewInterviewPanel() {
   const handleStart = async () => {
     const company  = selectedJob ? selectedJob.company  : manualCompany.trim()
     const position = selectedJob ? selectedJob.title    : manualPosition.trim()
-    if (!company || !position) return alert('회사명과 직무를 입력해 주세요.')
+    if (!company || !position) return alert(t('interview.alertMissingFields'))
 
     setLoading(true)
     try {
@@ -95,8 +133,9 @@ function NewInterviewPanel() {
       setMessages([{ role: 'ai', content: data.question }])
       setCurrentIndex(0)
       setPhase('interviewing')
+      speak(data.question)
     } catch (e) {
-      alert('면접 시작에 실패했습니다. 잠시 후 다시 시도해 주세요.')
+      alert(t('interview.alertStartFailed'))
     } finally {
       setLoading(false)
     }
@@ -105,6 +144,7 @@ function NewInterviewPanel() {
   const handleSubmitAnswer = async () => {
     const answer = inputText.trim()
     if (!answer) return
+    if (listening) { try { recognitionRef.current?.stop() } catch {} }
     setInputText('')
     setMessages(prev => [...prev, { role: 'user', content: answer }])
     setLoading(true)
@@ -128,9 +168,10 @@ function NewInterviewPanel() {
         // 다음 질문
         setCurrentIndex(data.currentIndex)
         setMessages(prev => [...prev, { role: 'ai', content: data.nextQuestion }])
+        speak(data.nextQuestion)
       }
     } catch (e) {
-      setMessages(prev => [...prev, { role: 'feedback', content: '답변 처리 중 오류가 발생했습니다.' }])
+      setMessages(prev => [...prev, { role: 'feedback', content: t('interview.answerError') }])
     } finally {
       setLoading(false)
     }
@@ -162,7 +203,7 @@ function NewInterviewPanel() {
         {savedJobs.length > 0 && (
           <section>
             <h2 className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">
-              저장된 채용공고에서 선택
+              {t('interview.selectFromSaved')}
             </h2>
             <div className="grid gap-2 max-h-52 overflow-y-auto pr-1">
               {savedJobs.map(job => (
@@ -186,26 +227,26 @@ function NewInterviewPanel() {
 
         <div className="flex items-center gap-3 text-sm text-slate-400">
           <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
-          <span>{savedJobs.length > 0 ? '또는 직접 입력' : '직접 입력'}</span>
+          <span>{savedJobs.length > 0 ? t('interview.orManualInput') : t('interview.manualInput')}</span>
           <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
         </div>
 
         {/* 직접 입력 */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs text-slate-500 mb-1 block">회사명</label>
+            <label className="text-xs text-slate-500 mb-1 block">{t('interview.companyLabel')}</label>
             <input
               className="input w-full"
-              placeholder="예: 카카오"
+              placeholder={t('interview.companyPlaceholder')}
               value={selectedJob ? selectedJob.company : manualCompany}
               onChange={e => { setSelectedJob(null); setManualCompany(e.target.value) }}
             />
           </div>
           <div>
-            <label className="text-xs text-slate-500 mb-1 block">직무 / 공고 제목</label>
+            <label className="text-xs text-slate-500 mb-1 block">{t('interview.positionLabel')}</label>
             <input
               className="input w-full"
-              placeholder="예: 백엔드 개발자"
+              placeholder={t('interview.positionPlaceholder')}
               value={selectedJob ? selectedJob.title : manualPosition}
               onChange={e => { setSelectedJob(null); setManualPosition(e.target.value) }}
             />
@@ -214,7 +255,7 @@ function NewInterviewPanel() {
 
         {/* 질문 수 선택 */}
         <div>
-          <label className="text-xs text-slate-500 mb-2 block">질문 수</label>
+          <label className="text-xs text-slate-500 mb-2 block">{t('interview.questionCount')}</label>
           <div className="flex gap-2">
             {[3, 5, 7, 10].map(n => (
               <button
@@ -226,7 +267,7 @@ function NewInterviewPanel() {
                     : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-primary/50'
                 }`}
               >
-                {n}개
+                {t('interview.questionCountN', { n })}
               </button>
             ))}
           </div>
@@ -237,7 +278,7 @@ function NewInterviewPanel() {
           disabled={loading}
           className="btn-primary w-full"
         >
-          {loading ? '포트폴리오 분석 중…' : '면접 시작'}
+          {loading ? t('interview.analyzing') : t('interview.startBtn')}
         </button>
       </div>
     )
@@ -256,9 +297,17 @@ function NewInterviewPanel() {
             <span className="text-slate-400 mx-2">·</span>
             <span className="text-sm text-slate-500">{session.position}</span>
           </div>
-          <span className="chip text-xs">
-            {currentIndex + 1} / {session.totalQuestions}
-          </span>
+          <div className="flex items-center gap-2">
+            <button type="button"
+              onClick={() => setTtsOn(v => { if (v) stopSpeak(); return !v })}
+              title={ttsOn ? t('interview.ttsOn') : t('interview.ttsOff')}
+              className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border transition-colors ${ttsOn ? 'border-primary/40 text-primary' : 'border-slate-200 dark:border-slate-700 text-slate-400'}`}>
+              <span className="material-symbols-outlined text-[16px]">{ttsOn ? 'volume_up' : 'volume_off'}</span>
+            </button>
+            <span className="chip text-xs">
+              {currentIndex + 1} / {session.totalQuestions}
+            </span>
+          </div>
         </div>
 
         {/* 진행 바 */}
@@ -292,18 +341,23 @@ function NewInterviewPanel() {
           <textarea
             className="input flex-1 resize-none text-sm"
             rows={3}
-            placeholder="답변을 입력하세요… (Shift+Enter 줄바꿈, Enter 제출)"
+            placeholder={t('interview.answerPlaceholder')}
             value={inputText}
             onChange={e => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={loading}
           />
+          <button type="button" onClick={toggleMic}
+            title={listening ? t('interview.listening') : t('interview.micStart')}
+            className={`shrink-0 px-3 py-3 rounded-xl border transition-colors ${listening ? 'bg-error text-white border-error animate-pulse' : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:text-primary dark:hover:text-white'}`}>
+            <span className="material-symbols-outlined text-[20px]">{listening ? 'stop' : 'mic'}</span>
+          </button>
           <button
             onClick={handleSubmitAnswer}
             disabled={loading || !inputText.trim()}
             className="btn-primary px-5 py-3 shrink-0"
           >
-            제출
+            {t('common.submit')}
           </button>
         </div>
       </div>
@@ -315,7 +369,7 @@ function NewInterviewPanel() {
     return (
       <div className="space-y-5">
         <div className="card p-5 border-l-4 border-secondary-fixed">
-          <h2 className="font-medium text-primary mb-2">종합 피드백</h2>
+          <h2 className="font-medium text-primary mb-2">{t('interview.overallFeedback')}</h2>
           <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300 whitespace-pre-wrap">
             {result.overallFeedback}
           </p>
@@ -327,7 +381,7 @@ function NewInterviewPanel() {
               <p className="text-xs text-slate-400 font-medium">Q{i + 1}</p>
               <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{q.question}</p>
               <p className="text-sm text-slate-600 dark:text-slate-400 border-l-2 border-slate-200 pl-3">
-                {q.answer || '(미답변)'}
+                {q.answer || t('interview.noAnswer')}
               </p>
               {q.feedback && (
                 <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg px-3 py-2 text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
@@ -339,7 +393,7 @@ function NewInterviewPanel() {
         </div>
 
         <button onClick={handleReset} className="btn-secondary w-full">
-          새 면접 시작
+          {t('interview.tabNew')}
         </button>
       </div>
     )
@@ -352,6 +406,7 @@ function NewInterviewPanel() {
 // 채팅 버블 컴포넌트
 // ──────────────────────────────────────────────────────────────
 function ChatBubble({ msg }) {
+  const { t } = useTranslation()
   if (msg.role === 'user') {
     return (
       <div className="flex justify-end">
@@ -365,7 +420,7 @@ function ChatBubble({ msg }) {
     return (
       <div className="mx-2">
         <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3 text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
-          <span className="font-medium block mb-1">피드백</span>
+          <span className="font-medium block mb-1">{t('interview.feedbackLabel')}</span>
           {msg.content}
         </div>
       </div>
@@ -375,7 +430,7 @@ function ChatBubble({ msg }) {
     return (
       <div className="mx-2">
         <div className="bg-secondary-fixed/20 border border-secondary-fixed/40 rounded-xl px-4 py-3 text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
-          <span className="font-medium block mb-1 text-primary">종합 평가</span>
+          <span className="font-medium block mb-1 text-primary">{t('interview.overallEval')}</span>
           {msg.content}
         </div>
       </div>
@@ -396,6 +451,7 @@ function ChatBubble({ msg }) {
 // 면접 기록 패널
 // ──────────────────────────────────────────────────────────────
 function HistoryPanel() {
+  const { t } = useTranslation()
   const [sessions, setSessions] = useState([])
   const [loading, setLoading]   = useState(true)
   const [selected, setSelected] = useState(null)  // SessionDetail
@@ -412,9 +468,9 @@ function HistoryPanel() {
     setSelected(r.data)
   }
 
-  if (loading) return <p className="text-sm text-slate-400 py-4">불러오는 중…</p>
+  if (loading) return <p className="text-sm text-slate-400 py-4">{t('common.loading')}</p>
   if (sessions.length === 0) return (
-    <p className="text-sm text-slate-400 py-4 text-center">아직 면접 기록이 없습니다.</p>
+    <p className="text-sm text-slate-400 py-4 text-center">{t('interview.noHistory')}</p>
   )
 
   return (
@@ -435,7 +491,7 @@ function HistoryPanel() {
                 <span className={`chip text-xs ${
                   s.status === 'FINISHED' ? 'chip-active' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
                 }`}>
-                  {s.status === 'FINISHED' ? '완료' : '진행 중'}
+                  {s.status === 'FINISHED' ? t('interview.statusFinished') : t('interview.statusOngoing')}
                 </span>
                 <span className="text-xs text-slate-400">{s.currentIndex}/{s.totalQuestions}</span>
               </div>
@@ -450,7 +506,7 @@ function HistoryPanel() {
             <div className="mt-1 space-y-3 px-1">
               {selected.overallFeedback && (
                 <div className="card p-4 border-l-4 border-secondary-fixed">
-                  <p className="text-xs font-medium text-primary mb-1">종합 피드백</p>
+                  <p className="text-xs font-medium text-primary mb-1">{t('interview.overallFeedback')}</p>
                   <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
                     {selected.overallFeedback}
                   </p>
