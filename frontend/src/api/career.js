@@ -12,11 +12,18 @@ export const getSavedJobs = () => api.get('/career/saved-jobs')
 export const saveJob = (data) => api.post('/career/saved-jobs', data)
 export const deleteSavedJob = (id) => api.delete(`/career/saved-jobs/${id}`)
 
-// 채용공고 통합 검색
+// 채용공고 통합 검색 (filters.hideExpired=true 면 마감 지난 공고 제외, source='imported' 면 적재본)
 export const searchJobs = (keyword = 'IT', page = 0, filters = {}) =>
   api.get('/career/search/jobs', {
     params: { keyword, page, ...filters }
   })
+
+// 공공 채용공고(고용24) 수동 수집 트리거 — 백그라운드 적재 즉시 갱신
+export const refreshImportedJobs = () => api.post('/career/search/imported-jobs/refresh')
+
+// 개인별 취업 통계 (희망 직무 기반) — jobTitle 생략 시 저장된 희망직무 사용
+export const getJobStatistics = (jobTitle) =>
+  api.get('/career/statistics', { params: jobTitle ? { jobTitle } : {} })
 
 // Q-Net 자격증 API
 export const getCertSchedules = (keyword, year) =>
@@ -31,6 +38,9 @@ export const getExamLocations = (brchCd) =>
 // 블라인드 채용 기업
 export const searchBlindRecruit = (keyword, page = 1) =>
   api.get('/career/search/blind-recruit', { params: { keyword, page } })
+
+// 프로필 기반 검색 키워드 추천 (기본 키워드 + "이 직무는 어때요?" 칩)
+export const getKeywordSuggestions = () => api.get('/career/search/keyword-suggestions')
 
 // GitHub Token
 export const getGithubTokenStatus = () => api.get('/user/github-token')

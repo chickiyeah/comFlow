@@ -564,6 +564,7 @@
     "cancel": "キャンセル",
     "save": "保存",
     "jobKeywordPlaceholder": "キーワード (例: バックエンド、Java、フロントエンド)",
+    "suggestJobsLabel": "この職種はいかがですか？",
     "search": "検索",
     "searching": "検索中...",
     "regionLabel": "地域",

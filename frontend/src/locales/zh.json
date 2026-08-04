@@ -564,6 +564,7 @@
     "cancel": "取消",
     "save": "保存",
     "jobKeywordPlaceholder": "关键词 (例如：后端、Java、前端)",
+    "suggestJobsLabel": "这些职位怎么样？",
     "search": "搜索",
     "searching": "搜索中...",
     "regionLabel": "地区",

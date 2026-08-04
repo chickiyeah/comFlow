@@ -564,6 +564,7 @@
     "cancel": "Cancel",
     "save": "Save",
     "jobKeywordPlaceholder": "Keyword (e.g. Backend, Java, Frontend)",
+    "suggestJobsLabel": "How about these roles?",
     "search": "Search",
     "searching": "Searching...",
     "regionLabel": "Region",

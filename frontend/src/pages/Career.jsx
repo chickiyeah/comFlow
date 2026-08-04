@@ -7,7 +7,7 @@ import {
   getSavedJobs, saveJob, deleteSavedJob,
   searchJobs, getCertSchedules,
   searchQualifications, getQualificationDetail, getExamLocations,
-  getJobStatistics, refreshImportedJobs,
+  getJobStatistics, refreshImportedJobs, getKeywordSuggestions,
 } from '../api/career'
 import { getMyAlerts, createAlert, deleteAlert } from '../api/jobalert'
 import { getProfile, updateDesiredJob } from '../api/profile'
@@ -113,6 +113,7 @@ export default function Career() {
   const [importRefreshing, setImportRefreshing] = useState(false)
   const [importMsg, setImportMsg] = useState('')
   const [jobTotal, setJobTotal] = useState(null)
+  const [jobKeywordHints, setJobKeywordHints] = useState({ defaultKeyword: '', suggestions: [] })
 
   // Cert search state
   const [certKeyword, setCertKeyword] = useState('')
@@ -139,7 +140,7 @@ export default function Career() {
 
   useEffect(() => {
     if (tab === 'activities') loadActivities()
-    if (tab === 'jobs') loadSavedJobs()
+    if (tab === 'jobs') { loadSavedJobs(); loadKeywordSuggestions() }
     if (tab === 'alerts') loadAlerts()
     if (tab === 'stats') loadDesiredJob()
   }, [tab])
@@ -207,6 +208,18 @@ export default function Career() {
     } catch { /* ignore */ }
   }
 
+  // 프로필 기반 검색 키워드 추천 — 검색어가 아직 초기값(IT)이면 추천 기본값으로 프리필
+  const loadKeywordSuggestions = async () => {
+    try {
+      const res = await getKeywordSuggestions()
+      const data = res.data ?? {}
+      setJobKeywordHints({ defaultKeyword: data.defaultKeyword ?? '', suggestions: data.suggestions ?? [] })
+      if (data.defaultKeyword && (!jobKeyword.trim() || jobKeyword === 'IT')) {
+        setJobKeyword(data.defaultKeyword)
+      }
+    } catch { /* ignore */ }
+  }
+
   // Roadmap
   const handleRoadmap = async (e) => {
     e.preventDefault()
@@ -261,9 +274,10 @@ export default function Career() {
     loadActivities()
   }
 
-  // Job search
-  const handleJobSearch = async (e) => {
+  // Job search (keywordOverride: 추천 칩 클릭 시 최신 state 갱신을 기다리지 않고 즉시 검색)
+  const handleJobSearch = async (e, keywordOverride) => {
     e?.preventDefault()
+    const keyword = keywordOverride ?? jobKeyword
     setJobSearchLoading(true)
     setJobResults([])
     try {
@@ -272,12 +286,16 @@ export default function Career() {
       if (jobFilters.region) params.region = jobFilters.region
       if (jobFilters.career) params.career = jobFilters.career
       if (jobFilters.empType) params.empType = jobFilters.empType
-      const res = await searchJobs(jobKeyword, 0, params)
+      const res = await searchJobs(keyword, 0, params)
       const data = res.data ?? []
       setJobResults(data)
       setJobTotal(data.length)
     } catch { setJobResults([]) }
     finally { setJobSearchLoading(false) }
+  }
+  const handleSuggestionChipClick = (kw) => {
+    setJobKeyword(kw)
+    handleJobSearch(null, kw)
   }
 
   // 공공 채용공고 수동 수집 트리거 (백그라운드 적재 즉시 갱신)
@@ -873,6 +891,18 @@ export default function Career() {
                 {jobSearchLoading ? t('career.searching') : t('career.search')}
               </button>
             </form>
+
+            {/* 이 직무는 어때요? — 프로필(희망직무·보유기술) 기반 추천 칩 */}
+            {jobKeywordHints.suggestions.length > 0 && (
+              <div className="flex items-center flex-wrap gap-2">
+                <span className="text-xs text-on-surface-variant dark:text-slate-500 font-medium">{t('career.suggestJobsLabel', '이 직무는 어때요?')}</span>
+                {jobKeywordHints.suggestions.map((kw) => (
+                  <button key={kw} type="button" onClick={() => handleSuggestionChipClick(kw)} className="chip hover:bg-surface-container-high dark:hover:bg-slate-700 transition-colors">
+                    {kw}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* 지역 */}
             <div>
