@@ -625,7 +625,13 @@
     "importNow": "Thu thập ngay",
     "importing": "Đang thu thập…",
     "importDone": "Đã thu thập",
-    "importFail": "Thu thập thất bại."
+    "importFail": "Thu thập thất bại.",
+    "makeResume": "Hồ sơ cho công ty này",
+    "jobResumeLoading": "Đang tạo…",
+    "saveResume": "Lưu thành hồ sơ",
+    "close": "Đóng",
+    "jobResumeError": "Tạo hồ sơ thất bại. Vui lòng thử lại sau.",
+    "jobResumeSaved": "Đã lưu thành hồ sơ. Chỉnh sửa và tải PDF ở tab Kỹ thuật."
   },
   "technical": {
     "title": "Portfolio · CV",

@@ -625,7 +625,13 @@
     "importNow": "今すぐ収集",
     "importing": "収集中…",
     "importDone": "収集完了",
-    "importFail": "収集に失敗しました。"
+    "importFail": "収集に失敗しました。",
+    "makeResume": "この会社向け履歴書",
+    "jobResumeLoading": "生成中…",
+    "saveResume": "履歴書として保存",
+    "close": "閉じる",
+    "jobResumeError": "履歴書の生成に失敗しました。しばらくしてから再度お試しください。",
+    "jobResumeSaved": "履歴書として保存しました。技術タブで編集・PDFダウンロードできます。"
   },
   "technical": {
     "title": "ポートフォリオ・履歴書",

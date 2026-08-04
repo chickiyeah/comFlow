@@ -625,7 +625,13 @@
     "importNow": "立即采集",
     "importing": "采集中…",
     "importDone": "采集完成",
-    "importFail": "采集失败。"
+    "importFail": "采集失败。",
+    "makeResume": "为该公司生成简历",
+    "jobResumeLoading": "生成中…",
+    "saveResume": "保存为简历",
+    "close": "关闭",
+    "jobResumeError": "简历生成失败,请稍后再试。",
+    "jobResumeSaved": "已保存为简历。请在\"技术\"标签页中编辑或下载PDF。"
   },
   "technical": {
     "title": "作品集 · 简历",

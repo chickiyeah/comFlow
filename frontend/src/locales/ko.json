@@ -625,7 +625,13 @@
     "importNow": "지금 수집",
     "importing": "수집 중…",
     "importDone": "수집 완료",
-    "importFail": "수집에 실패했습니다."
+    "importFail": "수집에 실패했습니다.",
+    "makeResume": "이 회사로 이력서",
+    "jobResumeLoading": "생성 중…",
+    "saveResume": "이력서로 저장",
+    "close": "닫기",
+    "jobResumeError": "이력서 생성에 실패했습니다. 잠시 후 다시 시도해주세요.",
+    "jobResumeSaved": "이력서로 저장했습니다. 기술 탭에서 편집·PDF 다운로드하세요."
   },
   "technical": {
     "title": "포트폴리오 · 이력서",

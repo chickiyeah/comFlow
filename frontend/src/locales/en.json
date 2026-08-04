@@ -625,7 +625,13 @@
     "importNow": "Collect now",
     "importing": "Collecting…",
     "importDone": "Collected",
-    "importFail": "Collection failed."
+    "importFail": "Collection failed.",
+    "makeResume": "Resume for this job",
+    "jobResumeLoading": "Generating…",
+    "saveResume": "Save as resume",
+    "close": "Close",
+    "jobResumeError": "Failed to generate resume. Please try again later.",
+    "jobResumeSaved": "Saved as a resume. Edit or download the PDF in the Technical tab."
   },
   "technical": {
     "title": "Portfolio · Resume",
