@@ -1,6 +1,8 @@
 package com.campusflow.domain.resume.service;
 
 import com.campusflow.domain.ai.service.AiFacadeService;
+import com.campusflow.domain.jobpilot.dto.JobPosting;
+import com.campusflow.domain.jobpilot.dto.MatchReport;
 import com.campusflow.domain.jobpilot.util.CharCounter;
 import com.campusflow.domain.jobpilot.util.CharCounter.LengthVerdict;
 import com.campusflow.domain.resume.dto.HonestyReport;
@@ -56,13 +58,16 @@ public class ResumeAiGeneratorService {
             [희망 직무]
             %s
 
+            [지원 맥락]
+            %s
+
             [작성할 문항]
             "%s"
 
             [분량]
             - 목표: %d~%d자(공백포함), 최대 %d자.
 
-            위 문항에 대한 자소서 본문만 출력하세요.
+            위 문항에 대한 자소서 본문만 출력하세요. 지원 맥락이 특정 회사·직무를 가리키면 그에 맞춰 쓰되, 근거에 없는 사실은 만들지 마세요.
             """;
 
     private static final String RETRY_OVER = """
@@ -88,7 +93,7 @@ public class ResumeAiGeneratorService {
         List<HonestyReport.Fix> allFixes = new ArrayList<>();
 
         for (String question : GENERAL_QUESTIONS) {
-            String body = generateSection(evidence, targetJob, question);
+            String body = generateSection(evidence, targetJob, question, null);
             HonestyVerifier.FixResult fixed = honestyVerifier.verifyAndFix(question, body, evidence);
             allFixes.addAll(fixed.fixes());
             String finalBody = fixed.text();
@@ -105,11 +110,67 @@ public class ResumeAiGeneratorService {
         return new ResumeDraft(withCover, report, tpl);
     }
 
-    private String generateSection(String evidence, String targetJob, String question) {
+    public ResumeDraft generateForJob(String username, String template, JobPosting job, MatchReport match) {
+        String tpl = (template == null || template.isBlank()) ? "general" : template;
+        ResumeData facts = assembler.assemble(username);
+        String evidence = assembler.buildEvidence(facts);
+        String targetJob = (job.position() == null || job.position().isBlank())
+                ? (facts.targetJob() == null ? "" : facts.targetJob())
+                : job.position();
+        String jobContext = buildJobContext(job, match);
+
+        List<CoverLetterSection> sections = new ArrayList<>();
+        List<HonestyReport.Fix> allFixes = new ArrayList<>();
+        for (String question : GENERAL_QUESTIONS) {
+            String body = generateSection(evidence, targetJob, question, jobContext);
+            HonestyVerifier.FixResult fixed = honestyVerifier.verifyAndFix(question, body, evidence);
+            allFixes.addAll(fixed.fixes());
+            String finalBody = fixed.text();
+            sections.add(new CoverLetterSection(question, finalBody, CharCounter.count(finalBody, true)));
+        }
+
+        HonestyReport report = new HonestyReport(allFixes);
+        ResumeData withCover = new ResumeData(
+                facts.personal(), facts.education(), targetJob, facts.skills(), facts.projects(),
+                facts.careers(), facts.certs(), facts.languages(), facts.awards(),
+                sections, new Meta(tpl, null, report));
+        return new ResumeDraft(withCover, report, tpl);
+    }
+
+    /** 공고+매칭을 프롬프트용 맥락 블록으로. 없는 스킬을 보유한 것처럼 쓰지 말라는 정직성은 SYSTEM에서 유지. */
+    private String buildJobContext(JobPosting job, MatchReport match) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[지원 회사] ").append(orUnknown(job.company())).append('\n');
+        sb.append("[지원 직무] ").append(orUnknown(job.position())).append('\n');
+        if (job.requiredSkills() != null && !job.requiredSkills().isEmpty()) {
+            sb.append("[요구 스킬] ").append(String.join(", ", job.requiredSkills())).append('\n');
+        }
+        if (match != null) {
+            if (match.summary() != null && !match.summary().isBlank()) {
+                sb.append("[매칭 요약] ").append(match.summary()).append('\n');
+            }
+            if (match.strengths() != null && !match.strengths().isEmpty()) {
+                sb.append("[부각할 강점] ").append(String.join(", ", match.strengths().stream()
+                        .map(s -> s.skill() + "(" + s.evidence() + ")").limit(6).toList())).append('\n');
+            }
+            if (match.gaps() != null && !match.gaps().isEmpty()) {
+                sb.append("[정직하게 다룰 약점] ").append(String.join(", ", match.gaps().stream()
+                        .map(g -> g.skill() + "[" + g.severity() + "]").limit(6).toList())).append('\n');
+            }
+        }
+        return sb.toString().trim();
+    }
+
+    private static String orUnknown(String s) { return (s == null || s.isBlank()) ? "(미상)" : s; }
+
+    private String generateSection(String evidence, String targetJob, String question, String jobContext) {
         String tj = (targetJob == null || targetJob.isBlank()) ? "(미지정)" : targetJob;
         LengthVerdict t0 = CharCounter.check("", TARGET_LIMIT, LIMIT_TYPE);
-        String text = aiFacadeService.ask(SYSTEM,
-                USER.formatted(evidence, tj, question, t0.targetMin(), t0.targetMax(), TARGET_LIMIT)).trim();
+        String jobBlock = (jobContext == null || jobContext.isBlank())
+                ? "(특정 공고 없음 — 일반 지원용)"
+                : jobContext;
+        String user = USER.formatted(evidence, tj, jobBlock, question, t0.targetMin(), t0.targetMax(), TARGET_LIMIT);
+        String text = aiFacadeService.ask(SYSTEM, user).trim();
 
         for (int i = 0; i < MAX_LEN_RETRY; i++) {
             LengthVerdict v = CharCounter.check(text, TARGET_LIMIT, LIMIT_TYPE);
