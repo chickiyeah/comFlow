@@ -31,13 +31,14 @@ class JobImportServiceTest {
     @Mock private ImportedJobRepository repository;
     @Mock private JobFeedCollector failingFeed;
     @Mock private JobFeedCollector healthyFeed;
+    @Mock private DiscordNotifierService discordNotifierService;
 
     private JobImportService service;
 
     @BeforeEach
     void setUp() {
         service = new JobImportService(work24, jobkorea, saramin, worknet, repository,
-                List.of(failingFeed, healthyFeed));
+                List.of(failingFeed, healthyFeed), discordNotifierService);
     }
 
     @Test

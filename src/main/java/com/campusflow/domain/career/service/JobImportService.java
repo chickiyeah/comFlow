@@ -34,6 +34,7 @@ public class JobImportService {
     private final WorknetService worknetService;               // 워크넷 (공공)
     private final ImportedJobRepository importedJobRepository;
     private final List<JobFeedCollector> jobFeedCollectors;
+    private final DiscordNotifierService discordNotifierService; // 신규 공고 Discord 알림
 
     /** 학과 연관 기본 수집 키워드 (소수로 제한). */
     private static final List<String> KEYWORDS = List.of("IT", "개발", "정보보안", "네트워크");
@@ -46,18 +47,24 @@ public class JobImportService {
     /** 스케줄러용 — 항상 실행. 수집/갱신 건수 반환. */
     @Transactional
     public int importAll() {
+        List<ImportedJob> newJobs = new ArrayList<>();
         int count = 0;
         for (String kw : KEYWORDS) {
             try {
-                count += importKeyword(kw);
+                count += importKeyword(kw, newJobs);
             } catch (Exception e) {
                 log.warn("[채용수집] 키워드 '{}' 수집 실패: {}", kw, e.getMessage());
             }
         }
-        count += importFeeds();
+        count += importFeeds(newJobs);
         purgeExpired();
         lastImportAt = LocalDateTime.now();
         log.info("[채용수집] 완료 — 신규/갱신 {}건", count);
+        try {
+            discordNotifierService.notifyNewJobs(newJobs);
+        } catch (Exception e) {
+            log.warn("[Discord] 알림 처리 실패: {}", e.getMessage());
+        }
         return count;
     }
 
@@ -72,17 +79,17 @@ public class JobImportService {
         return importAll();
     }
 
-    private int importKeyword(String keyword) {
+    private int importKeyword(String keyword, List<ImportedJob> newJobs) {
         List<JobSearchResult> results = collectFromAllSources(keyword);
-        return upsertResults(results, keyword);
+        return upsertResults(results, keyword, newJobs);
     }
 
     /** Sitemap/JSON feeds are collected once per run, not once per search keyword. */
-    private int importFeeds() {
+    private int importFeeds(List<ImportedJob> newJobs) {
         int count = 0;
         for (JobFeedCollector collector : jobFeedCollectors) {
             try {
-                count += upsertResults(collector.collectLatest(), "feed");
+                count += upsertResults(collector.collectLatest(), "feed", newJobs);
             } catch (Exception e) {
                 log.warn("[채용수집] {} 피드 수집 실패: {}", collector.source(), e.getMessage());
             }
@@ -90,7 +97,7 @@ public class JobImportService {
         return count;
     }
 
-    private int upsertResults(List<JobSearchResult> results, String keyword) {
+    private int upsertResults(List<JobSearchResult> results, String keyword, List<ImportedJob> newJobs) {
         if (results == null || results.isEmpty()) return 0;
         LocalDate today = LocalDate.now();
         int n = 0;
@@ -104,7 +111,7 @@ public class JobImportService {
                 existing.refresh(r.title(), r.company(), r.location(),
                         r.deadline(), r.jobType(), r.salary(), keyword);
             } else {
-                importedJobRepository.save(ImportedJob.builder()
+                ImportedJob saved = importedJobRepository.save(ImportedJob.builder()
                         .source(r.source() != null ? r.source() : "work24")
                         .url(r.url())
                         .title(r.title())
@@ -115,6 +122,7 @@ public class JobImportService {
                         .salary(r.salary())
                         .keyword(keyword)
                         .build());
+                newJobs.add(saved);
             }
             n++;
         }

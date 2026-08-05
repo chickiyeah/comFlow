@@ -28,6 +28,7 @@ public class JobSearchController {
     private final BlindRecruitService blindRecruitService;
     private final JobImportService jobImportService;
     private final JobKeywordSuggestionService jobKeywordSuggestionService;
+    private final DiscordNotifierService discordNotifierService;
 
     // source: all | jobkorea | work24 | worknet | saramin | imported
     // hideExpired: true(기본) 면 마감 지난 공고 제외
@@ -143,5 +144,11 @@ public class JobSearchController {
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "1") int page) {
         return ApiResponse.ok(blindRecruitService.search(keyword, page));
+    }
+
+    /** Discord 웹훅 알림 배선 테스트. 전송 건수(웹훅 미설정이면 -1) 반환. */
+    @PostMapping("/discord/test")
+    public ApiResponse<Integer> discordTest(@AuthenticationPrincipal String username) {
+        return ApiResponse.ok(discordNotifierService.notifyTest());
     }
 }
