@@ -1,8 +1,17 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useCallback } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import useAuthStore from '../../store/authStore'
 import useThemeStore from '../../store/themeStore'
+import { getCurrentTerm } from '../../utils/term'
+import {
+  getNotifications, getUnreadCount, markNotificationRead,
+  markAllNotificationsRead, refreshJobNotifications,
+} from '../../api/notification'
+import { logout as logoutApi } from '../../api/auth'
+import { search as searchApi } from '../../api/search'
+import useExternalLink from '../../store/externalLinkStore'
+import { NAV_CATEGORIES, roleGatedItems, containsPath, flattenLeaves } from '../../config/navConfig'
 
 const LANGUAGES = [
   { code: 'ko', label: '한국어', flag: '🇰🇷' },
@@ -10,6 +19,7 @@ const LANGUAGES = [
   { code: 'zh', label: '中文',   flag: '🇨🇳' },
   { code: 'ja', label: '日本語', flag: '🇯🇵' },
   { code: 'vi', label: 'Tiếng Việt', flag: '🇻🇳' },
+  { code: 'my', label: 'မြန်မာ', flag: '🇲🇲' },
 ]
 
 export default function TopNav({ title }) {
@@ -17,14 +27,106 @@ export default function TopNav({ title }) {
   const { dark, toggle } = useThemeStore()
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
 
   const [showMenu, setShowMenu] = useState(false)   // desktop avatar dropdown
   const [showLang, setShowLang] = useState(false)   // language dropdown
   const [showDrawer, setShowDrawer] = useState(false) // mobile drawer
 
-  const currentLang = LANGUAGES.find(l => l.code === i18n.language) ?? LANGUAGES[0]
+  // 알림센터
+  const [showNotif, setShowNotif] = useState(false)
+  const [notifs, setNotifs] = useState([])
+  const [unread, setUnread] = useState(0)
+  const [notifLoading, setNotifLoading] = useState(false)
+  const [refreshingJobs, setRefreshingJobs] = useState(false)
 
-  const handleLogout = () => {
+  // 통합 검색
+  const [searchQ, setSearchQ] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [searchOpen, setSearchOpen] = useState(false)
+
+  const currentLang = LANGUAGES.find(l => l.code === i18n.language) ?? LANGUAGES[0]
+  const term = getCurrentTerm()
+
+  // 전역 네비 설정(navConfig)의 모든 리프 페이지를 검색 대상으로 사용 — 메뉴 구성과 항상 일치
+  const SEARCH_PAGES = flattenLeaves([...NAV_CATEGORIES, ...roleGatedItems(user?.role)])
+    .map(item => ({ title: t(`nav.${item.key}`), link: item.path }))
+
+  const runSearch = async (q) => {
+    setSearchQ(q)
+    const query = q.trim()
+    if (!query) { setSearchResults([]); setSearchOpen(false); return }
+    setSearchOpen(true)
+    const pages = SEARCH_PAGES
+      .filter(p => p.title.toLowerCase().includes(query.toLowerCase()))
+      .map(p => ({ type: 'page', title: p.title, subtitle: '', link: p.link }))
+    let apiResults = []
+    try { const r = await searchApi(query); apiResults = r.data ?? [] } catch { /* ignore */ }
+    setSearchResults([...pages, ...apiResults])
+  }
+  const goSearch = (item) => {
+    setSearchOpen(false); setSearchQ(''); setSearchResults([])
+    if (item.link) navigate(item.link)
+  }
+
+  const loadUnread = useCallback(async () => {
+    try { const r = await getUnreadCount(); setUnread(r.data?.count ?? 0) }
+    catch { /* ignore */ }
+  }, [])
+
+  // 안 읽은 알림 수 폴링 (마운트 + 60초 주기)
+  useEffect(() => {
+    if (!user) return
+    loadUnread()
+    const id = setInterval(loadUnread, 60000)
+    return () => clearInterval(id)
+  }, [user, loadUnread])
+
+  const openNotif = async () => {
+    setShowNotif(true)
+    setShowDrawer(false)
+    setNotifLoading(true)
+    try { const r = await getNotifications(); setNotifs(r.data ?? []) }
+    catch { setNotifs([]) }
+    finally { setNotifLoading(false) }
+  }
+
+  const handleNotifClick = async (n) => {
+    try { if (!n.read) { await markNotificationRead(n.id); loadUnread() } } catch { /* ignore */ }
+    setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x))
+    if (n.link) {
+      if (/^https?:\/\//i.test(n.link)) { setShowNotif(false); useExternalLink.getState().open(n.link) }
+      else { setShowNotif(false); navigate(n.link) }
+    }
+  }
+
+  const handleMarkAll = async () => {
+    try { await markAllNotificationsRead() } catch { /* ignore */ }
+    setNotifs(prev => prev.map(x => ({ ...x, read: true })))
+    setUnread(0)
+  }
+
+  const handleRefreshJobs = async () => {
+    setRefreshingJobs(true)
+    try {
+      await refreshJobNotifications()
+      const r = await getNotifications(); setNotifs(r.data ?? [])
+      loadUnread()
+    } catch { /* ignore */ }
+    finally { setRefreshingJobs(false) }
+  }
+
+  const timeAgo = (iso) => {
+    if (!iso) return ''
+    const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+    if (diff < 60) return t('ui.notif.justNow')
+    if (diff < 3600) return t('ui.notif.minutesAgo', { count: Math.floor(diff / 60) })
+    if (diff < 86400) return t('ui.notif.hoursAgo', { count: Math.floor(diff / 3600) })
+    return t('ui.notif.daysAgo', { count: Math.floor(diff / 86400) })
+  }
+
+  const handleLogout = async () => {
+    try { await logoutApi() } catch { /* 서버 세션 폐기 실패해도 로컬 로그아웃 진행 */ }
     logout()
     navigate('/login')
     setShowDrawer(false)
@@ -45,7 +147,7 @@ export default function TopNav({ title }) {
             CampusFlow
           </button>
           <span className="text-on-surface-variant text-label-md bg-surface-container dark:bg-slate-800 px-3 py-1 rounded-full hidden sm:inline border border-outline-variant/30 shrink-0">
-            2024년 1학기
+            {t('ui.currentTerm', { year: term.year, semester: term.semester })}
           </span>
           {title && (
             <h1 className="text-lg font-bold text-primary dark:text-slate-300 border-l border-slate-200 dark:border-slate-800 pl-4 hidden md:block font-['Space_Grotesk'] truncate">
@@ -62,10 +164,35 @@ export default function TopNav({ title }) {
               search
             </span>
             <input
+              value={searchQ}
+              onChange={e => runSearch(e.target.value)}
+              onFocus={() => { if (searchResults.length) setSearchOpen(true) }}
               className="pl-9 pr-4 py-2 bg-slate-100 dark:bg-slate-900 dark:border dark:border-slate-800 dark:text-on-surface border-none rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 dark:focus:ring-secondary-fixed/20 w-64 transition-all"
               placeholder={t('common.search')}
               type="text"
             />
+            {searchOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setSearchOpen(false)} />
+                <div className="absolute right-0 top-11 w-80 max-h-96 overflow-y-auto bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-100 dark:border-slate-800 py-1 z-50">
+                  {searchResults.length === 0 ? (
+                    <p className="px-4 py-6 text-sm text-center text-outline dark:text-slate-500">{t('ui.search.empty')}</p>
+                  ) : searchResults.map((r, i) => (
+                    <button key={i} onClick={() => goSearch(r)}
+                      className="w-full text-left px-4 py-2.5 flex items-center gap-3 hover:bg-surface-container-low dark:hover:bg-slate-800 transition-colors">
+                      <span className="material-symbols-outlined text-[18px] text-outline dark:text-slate-400">
+                        {r.type === 'course' ? 'smart_display' : r.type === 'notice' ? 'campaign' : 'arrow_forward'}
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-sm font-medium text-on-surface dark:text-slate-200 truncate">{r.title}</span>
+                        {r.subtitle && <span className="block text-[11px] text-outline dark:text-slate-500 truncate">{r.subtitle}</span>}
+                      </span>
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-surface-container dark:bg-slate-800 text-outline dark:text-slate-400 shrink-0">{t('ui.search.' + r.type)}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Language selector — always visible */}
@@ -105,18 +232,24 @@ export default function TopNav({ title }) {
           {/* Desktop-only buttons */}
           <button onClick={toggle}
             className="hidden lg:flex p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors active:scale-95"
-            title={dark ? '라이트 모드' : '다크 모드'}>
+            title={dark ? t('ui.lightMode') : t('ui.darkMode')}>
             <span className="material-symbols-outlined">{dark ? 'light_mode' : 'dark_mode'}</span>
           </button>
 
-          <button className="hidden lg:flex p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors relative active:scale-95">
+          <button onClick={openNotif}
+            className="hidden lg:flex p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors relative active:scale-95"
+            title={t('ui.notifications')}>
             <span className="material-symbols-outlined">notifications</span>
-            <span className="absolute top-2 right-2 w-2 h-2 bg-error rounded-full ring-2 ring-white dark:ring-[#0a0c10]" />
+            {unread > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-error text-white text-[10px] font-black rounded-full ring-2 ring-white dark:ring-[#0a0c10] flex items-center justify-center">
+                {unread > 99 ? '99+' : unread}
+              </span>
+            )}
           </button>
 
           <button onClick={() => navigate('/profile')}
             className="hidden lg:flex p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors active:scale-95"
-            title="설정 / 프로필">
+            title={t('ui.settingsProfile')}>
             <span className="material-symbols-outlined">settings</span>
           </button>
 
@@ -128,9 +261,9 @@ export default function TopNav({ title }) {
             >
               <div className="text-right">
                 <p className="text-label-md font-bold text-primary dark:text-secondary-fixed">
-                  {user?.name ?? '학생'} 학우님
+                  {t('ui.studentHonorific', { name: user?.name ?? t('ui.guest') })}
                 </p>
-                <p className="text-[10px] text-on-surface-variant">컴퓨터정보과</p>
+                <p className="text-[10px] text-on-surface-variant">{t('ui.department')}</p>
               </div>
               <div className="w-9 h-9 rounded-full bg-primary-container dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-secondary-fixed font-bold text-sm shrink-0">
                 {user?.name?.[0] ?? 'S'}
@@ -145,21 +278,21 @@ export default function TopNav({ title }) {
                     className="w-full text-left px-4 py-2.5 text-sm text-on-surface dark:text-slate-300 hover:bg-surface-container-low dark:hover:bg-slate-800 transition-colors flex items-center gap-2"
                   >
                     <span className="material-symbols-outlined text-[16px]">manage_accounts</span>
-                    프로필 / 설정
+                    {t('ui.profileSettings')}
                   </button>
                   <button
                     onClick={() => { navigate('/calendar'); setShowMenu(false) }}
                     className="w-full text-left px-4 py-2.5 text-sm text-on-surface dark:text-slate-300 hover:bg-surface-container-low dark:hover:bg-slate-800 transition-colors flex items-center gap-2"
                   >
                     <span className="material-symbols-outlined text-[16px]">calendar_month</span>
-                    캘린더
+                    {t('nav.calendar')}
                   </button>
                   <button
                     onClick={() => { navigate('/study'); setShowMenu(false) }}
                     className="w-full text-left px-4 py-2.5 text-sm text-on-surface dark:text-slate-300 hover:bg-surface-container-low dark:hover:bg-slate-800 transition-colors flex items-center gap-2"
                   >
                     <span className="material-symbols-outlined text-[16px]">groups</span>
-                    스터디
+                    {t('nav.study')}
                   </button>
                   <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
                   <button
@@ -167,7 +300,7 @@ export default function TopNav({ title }) {
                     className="w-full text-left px-4 py-2.5 text-sm text-error hover:bg-error-container dark:hover:bg-error/20 transition-colors flex items-center gap-2"
                   >
                     <span className="material-symbols-outlined text-[16px]">logout</span>
-                    로그아웃
+                    {t('auth.logout')}
                   </button>
                 </div>
               </>
@@ -199,8 +332,8 @@ export default function TopNav({ title }) {
                   {user?.name?.[0] ?? 'S'}
                 </div>
                 <div>
-                  <p className="font-bold text-primary dark:text-white text-sm">{user?.name ?? '학생'} 학우님</p>
-                  <p className="text-[11px] text-on-surface-variant dark:text-slate-400">컴퓨터정보과</p>
+                  <p className="font-bold text-primary dark:text-white text-sm">{t('ui.studentHonorific', { name: user?.name ?? t('ui.guest') })}</p>
+                  <p className="text-[11px] text-on-surface-variant dark:text-slate-400">{t('ui.department')}</p>
                 </div>
               </div>
               <button onClick={() => setShowDrawer(false)}
@@ -216,35 +349,31 @@ export default function TopNav({ title }) {
                 <span className="material-symbols-outlined text-slate-500 dark:text-slate-400">
                   {dark ? 'light_mode' : 'dark_mode'}
                 </span>
-                <span className="text-sm font-medium">{dark ? '라이트 모드' : '다크 모드'}</span>
+                <span className="text-sm font-medium">{dark ? t('ui.lightMode') : t('ui.darkMode')}</span>
                 <span className={`ml-auto w-10 h-5 rounded-full transition-colors relative ${dark ? 'bg-primary dark:bg-secondary-fixed' : 'bg-slate-300 dark:bg-slate-600'}`}>
                   <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${dark ? 'translate-x-5' : 'translate-x-0.5'}`} />
                 </span>
               </button>
 
-              <button className="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-surface-container dark:hover:bg-slate-800 transition-colors text-on-surface dark:text-slate-200 relative">
+              <button onClick={openNotif}
+                className="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-surface-container dark:hover:bg-slate-800 transition-colors text-on-surface dark:text-slate-200 relative">
                 <span className="material-symbols-outlined text-slate-500 dark:text-slate-400">notifications</span>
-                <span className="text-sm font-medium">알림</span>
-                <span className="ml-auto w-2 h-2 bg-error rounded-full" />
+                <span className="text-sm font-medium">{t('ui.notifications')}</span>
+                {unread > 0 && (
+                  <span className="ml-auto min-w-[20px] h-5 px-1.5 bg-error text-white text-[11px] font-black rounded-full flex items-center justify-center">
+                    {unread > 99 ? '99+' : unread}
+                  </span>
+                )}
               </button>
 
-              <button onClick={() => { navigate('/profile'); setShowDrawer(false) }}
-                className="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-surface-container dark:hover:bg-slate-800 transition-colors text-on-surface dark:text-slate-200">
-                <span className="material-symbols-outlined text-slate-500 dark:text-slate-400">settings</span>
-                <span className="text-sm font-medium">설정 / 프로필</span>
-              </button>
+              <div className="my-2 border-t border-slate-100 dark:border-slate-800" />
 
-              <button onClick={() => { navigate('/calendar'); setShowDrawer(false) }}
-                className="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-surface-container dark:hover:bg-slate-800 transition-colors text-on-surface dark:text-slate-200">
-                <span className="material-symbols-outlined text-slate-500 dark:text-slate-400">calendar_month</span>
-                <span className="text-sm font-medium">캘린더</span>
-              </button>
-
-              <button onClick={() => { navigate('/study'); setShowDrawer(false) }}
-                className="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-surface-container dark:hover:bg-slate-800 transition-colors text-on-surface dark:text-slate-200">
-                <span className="material-symbols-outlined text-slate-500 dark:text-slate-400">groups</span>
-                <span className="text-sm font-medium">스터디</span>
-              </button>
+              <MobileNavAccordion
+                items={[...NAV_CATEGORIES, ...roleGatedItems(user?.role)]}
+                pathname={pathname}
+                onNavigate={(path) => { navigate(path); setShowDrawer(false) }}
+                t={t}
+              />
             </div>
 
             {/* Logout */}
@@ -254,12 +383,142 @@ export default function TopNav({ title }) {
                 className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-error hover:bg-error-container dark:hover:bg-error/20 transition-colors"
               >
                 <span className="material-symbols-outlined">logout</span>
-                <span className="text-sm font-semibold">로그아웃</span>
+                <span className="text-sm font-semibold">{t('auth.logout')}</span>
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* ── 알림센터 슬라이드 패널 ── */}
+      {showNotif && (
+        <div className="fixed inset-0 z-[60]" onClick={() => setShowNotif(false)}>
+          <div className="absolute inset-0 bg-black/40 dark:bg-black/60" />
+          <div
+            onClick={e => e.stopPropagation()}
+            className="absolute top-0 right-0 h-full w-full sm:w-[420px] bg-white dark:bg-slate-900 shadow-2xl flex flex-col"
+          >
+            {/* 헤더 */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary dark:text-secondary-fixed">notifications</span>
+                <h2 className="font-['Space_Grotesk'] font-bold text-primary dark:text-white">{t('ui.notifications')}</h2>
+                {unread > 0 && <span className="text-xs font-bold text-error">({unread})</span>}
+              </div>
+              <div className="flex items-center gap-1">
+                <button onClick={handleRefreshJobs} disabled={refreshingJobs}
+                  className="p-2 rounded-full hover:bg-surface-container dark:hover:bg-slate-800 text-outline dark:text-slate-400 disabled:opacity-50"
+                  title={t('ui.notif.checkJobs')}>
+                  <span className={`material-symbols-outlined text-[20px] ${refreshingJobs ? 'animate-spin' : ''}`}>refresh</span>
+                </button>
+                <button onClick={() => setShowNotif(false)}
+                  className="p-2 rounded-full hover:bg-surface-container dark:hover:bg-slate-800 text-outline dark:text-slate-400">
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 액션 바 */}
+            <div className="flex items-center justify-between px-5 py-2 border-b border-slate-100 dark:border-slate-800">
+              <button onClick={handleRefreshJobs} disabled={refreshingJobs}
+                className="text-xs font-semibold text-primary dark:text-secondary-fixed flex items-center gap-1 disabled:opacity-50">
+                <span className="material-symbols-outlined text-[16px]">work</span>
+                {refreshingJobs ? t('ui.notif.checking') : t('ui.notif.checkJobs')}
+              </button>
+              {notifs.some(n => !n.read) && (
+                <button onClick={handleMarkAll} className="text-xs font-semibold text-outline dark:text-slate-400 hover:text-primary dark:hover:text-white">
+                  {t('ui.notif.markAllRead')}
+                </button>
+              )}
+            </div>
+
+            {/* 목록 */}
+            <div className="flex-1 overflow-y-auto">
+              {notifLoading ? (
+                <div className="p-4 space-y-3">
+                  {[1,2,3].map(i => <div key={i} className="h-16 bg-surface-container-low dark:bg-slate-800 rounded-xl animate-pulse" />)}
+                </div>
+              ) : notifs.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center px-6">
+                  <span className="material-symbols-outlined text-[56px] text-outline dark:text-slate-600 mb-3">notifications_off</span>
+                  <p className="font-bold text-primary dark:text-white">{t('ui.notif.emptyTitle')}</p>
+                  <p className="text-sm text-on-surface-variant dark:text-slate-400 mt-1">{t('ui.notif.emptySubtitle')}</p>
+                </div>
+              ) : (
+                <ul>
+                  {notifs.map(n => (
+                    <li key={n.id}>
+                      <button onClick={() => handleNotifClick(n)}
+                        className={`w-full text-left px-5 py-3.5 flex gap-3 border-b border-slate-50 dark:border-slate-800/50 hover:bg-surface-container-low dark:hover:bg-slate-800 transition-colors ${n.read ? '' : 'bg-secondary-container/20 dark:bg-secondary-fixed/5'}`}>
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${n.read ? 'bg-surface-container dark:bg-slate-800 text-outline dark:text-slate-500' : 'bg-primary dark:bg-primary-container text-secondary-fixed'}`}>
+                          <span className="material-symbols-outlined text-[18px]">{n.icon || 'notifications'}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className={`text-sm truncate ${n.read ? 'font-medium text-on-surface dark:text-slate-300' : 'font-bold text-primary dark:text-white'}`}>{n.title}</p>
+                            {!n.read && <span className="w-2 h-2 rounded-full bg-error shrink-0" />}
+                          </div>
+                          {n.body && <p className="text-xs text-on-surface-variant dark:text-slate-400 mt-0.5 line-clamp-2">{n.body}</p>}
+                          <p className="text-[11px] text-outline dark:text-slate-500 mt-1">{timeAgo(n.createdAt)}</p>
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
+  )
+}
+
+// 모바일 드로어 전체 메뉴 아코디언 — 대메뉴는 항상 펼쳐진 섹션 헤더, 중/소메뉴는 그 안에서 접었다 펼 수 있음.
+function MobileNavAccordion({ items, pathname, onNavigate, t }) {
+  const [openKeys, setOpenKeys] = useState(() => new Set(
+    items.filter(i => i.children && containsPath(i, pathname)).map(i => i.key)
+  ))
+  const toggle = (key) => setOpenKeys(prev => {
+    const next = new Set(prev)
+    next.has(key) ? next.delete(key) : next.add(key)
+    return next
+  })
+
+  return (
+    <div className="space-y-0.5">
+      {items.map(item => {
+        if (!item.children) {
+          const active = pathname === item.path || pathname.startsWith(item.path + '/')
+          return (
+            <button key={item.key} onClick={() => onNavigate(item.path)}
+              className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-colors
+                ${active ? 'bg-primary-container dark:bg-secondary-fixed/10 text-primary dark:text-secondary-fixed font-bold'
+                         : 'hover:bg-surface-container dark:hover:bg-slate-800 text-on-surface dark:text-slate-200'}`}>
+              <span className="material-symbols-outlined text-slate-500 dark:text-slate-400">{item.icon}</span>
+              <span className="text-sm font-medium">{t(`nav.${item.key}`)}</span>
+            </button>
+          )
+        }
+        const open = openKeys.has(item.key)
+        const active = containsPath(item, pathname)
+        return (
+          <div key={item.key}>
+            <button onClick={() => toggle(item.key)}
+              className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-colors
+                ${active ? 'text-primary dark:text-secondary-fixed' : 'text-on-surface dark:text-slate-200 hover:bg-surface-container dark:hover:bg-slate-800'}`}>
+              <span className="material-symbols-outlined text-slate-500 dark:text-slate-400">{item.icon}</span>
+              <span className="text-sm font-bold flex-1 text-left">{t(`nav.${item.key}`)}</span>
+              <span className="material-symbols-outlined text-[18px] text-slate-400">{open ? 'expand_less' : 'expand_more'}</span>
+            </button>
+            {open && (
+              <div className="pl-6 space-y-0.5 mb-1">
+                <MobileNavAccordion items={item.children} pathname={pathname} onNavigate={onNavigate} t={t} />
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
   )
 }

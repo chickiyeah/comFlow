@@ -7,6 +7,7 @@ import en from './locales/en.json'
 import zh from './locales/zh.json'
 import ja from './locales/ja.json'
 import vi from './locales/vi.json'
+import my from './locales/my.json'
 
 i18n
   .use(LanguageDetector)
@@ -18,8 +19,10 @@ i18n
       zh: { translation: zh },
       ja: { translation: ja },
       vi: { translation: vi },
+      my: { translation: my },
     },
-    fallbackLng: 'ko',
+    // 미얀마어(my)는 아직 부분 번역 — 미번역 키는 영어로 폴백(그다음 한국어)
+    fallbackLng: { my: ['en', 'ko'], default: ['ko'] },
     interpolation: { escapeValue: false },
     detection: {
       order: ['localStorage', 'navigator'],

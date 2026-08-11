@@ -9,5 +9,7 @@ public record ResumeRequest(
         String summary,
         String skills,
         String targetJob,
+        String resumeData,   // 리치 이력서 JSON (nullable — 구 클라이언트 호환)
+        String template,     // 양식 키 (nullable)
         List<Long> portfolioIds // 연동할 포트폴리오 ID 목록 (순서 = 표시 순서)
 ) {}

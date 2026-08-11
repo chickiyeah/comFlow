@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8"/>
+  <style>
+    @page { size: A4 landscape; margin: 0; }
+    * { box-sizing: border-box; }
+    body { font-family: 'Malgun Gothic', sans-serif; margin: 0; color: #1a2236; }
+    .frame { width: 100%; height: 540px; padding: 28px; }
+    .inner { height: 100%; border: 3px solid #00236f; border-radius: 14px; padding: 36px 56px;
+             position: relative; background: #ffffff; }
+    .accent { position: absolute; top: 0; left: 0; right: 0; height: 10px;
+              background: #00236f; border-radius: 11px 11px 0 0; }
+    .brand { text-align: center; color: #00236f; font-size: 15px; letter-spacing: 4px; margin-top: 8px; }
+    .title { text-align: center; font-size: 44px; font-weight: 900; color: #00236f; margin: 18px 0 4px; letter-spacing: 8px; }
+    .subtitle { text-align: center; font-size: 13px; color: #5a6478; letter-spacing: 2px; margin-bottom: 30px; }
+    .row { text-align: center; font-size: 15px; margin: 6px 0; color: #3a4252; }
+    .name { text-align: center; font-size: 30px; font-weight: 800; color: #1a2236; margin: 14px 0; }
+    .name u { text-decoration: none; border-bottom: 2px solid #bff365; padding: 0 26px 4px; }
+    .course { text-align: center; font-size: 22px; font-weight: 700; color: #00236f; margin: 18px 0 6px; }
+    .body-text { text-align: center; font-size: 14px; color: #4a5262; line-height: 1.9; margin: 22px auto 0; max-width: 600px; }
+    .footer { position: absolute; bottom: 34px; left: 56px; right: 56px; }
+    .footer-row { display: flex; justify-content: space-between; align-items: flex-end; }
+    .cert-no { font-size: 11px; color: #8a92a4; }
+    .issue { text-align: center; font-size: 15px; font-weight: 700; color: #1a2236; margin-bottom: 6px; }
+    .org { text-align: center; font-size: 13px; color: #5a6478; }
+    .sign { text-align: right; font-size: 13px; color: #3a4252; }
+  </style>
+</head>
+<body>
+<div class="frame">
+  <div class="inner">
+    <div class="accent"></div>
+    <div class="brand">C A M P U S F L O W</div>
+    <div class="title">수 료 증</div>
+    <div class="subtitle">CERTIFICATE OF COMPLETION</div>
+
+    <div class="row">성명</div>
+    <div class="name"><u th:text="${studentName}">홍길동</u></div>
+
+    <div class="body-text">
+      위 사람은 아래 온라인 강좌의 전 과정을 성실히 이수하였기에<br/>이 증서를 수여합니다.
+    </div>
+
+    <div class="course" th:text="${courseTitle}">강좌명</div>
+    <div class="row" th:if="${instructorName}"><span th:text="'담당 ' + ${instructorName}">담당 교수</span></div>
+
+    <div class="footer">
+      <div class="issue" th:text="${completedDate}">2026-06-25</div>
+      <div class="org">전주비전대학교 컴퓨터정보과 · CampusFlow</div>
+      <div class="footer-row" style="margin-top:14px;">
+        <span class="cert-no" th:text="'증서번호 ' + ${certNo}">증서번호 CF-0000</span>
+        <span class="sign">컴퓨터정보과장 (인)</span>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

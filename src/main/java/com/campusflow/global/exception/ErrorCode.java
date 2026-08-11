@@ -19,6 +19,7 @@ public enum ErrorCode {
     EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "만료된 토큰입니다."),
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "아이디 또는 비밀번호가 올바르지 않습니다."),
     DUPLICATE_STUDENT_ID(HttpStatus.CONFLICT, "이미 존재하는 학번입니다."),
+    ACCOUNT_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 이메일로 가입된 계정이 없습니다."),
 
     // 학생
     STUDENT_NOT_FOUND(HttpStatus.NOT_FOUND, "학생을 찾을 수 없습니다."),
@@ -53,7 +54,19 @@ public enum ErrorCode {
     REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다."),
 
     // 채용 알리미
-    JOB_ALERT_NOT_FOUND(HttpStatus.NOT_FOUND, "채용 알리미를 찾을 수 없습니다.");
+    JOB_ALERT_NOT_FOUND(HttpStatus.NOT_FOUND, "채용 알리미를 찾을 수 없습니다."),
+
+    // 클래스룸 (NovaClass 포팅)
+    CLASS_NOT_FOUND(HttpStatus.NOT_FOUND, "클래스를 찾을 수 없습니다."),
+    CLASS_ACCESS_DENIED(HttpStatus.FORBIDDEN, "클래스 접근 권한이 없습니다."),
+    NOT_CLASS_TEACHER(HttpStatus.FORBIDDEN, "클래스 교사 권한이 필요합니다."),
+    ALREADY_CLASS_MEMBER(HttpStatus.CONFLICT, "이미 참여한 클래스입니다."),
+    INVALID_CLASS_CODE(HttpStatus.NOT_FOUND, "유효하지 않은 클래스 코드입니다."),
+
+    // 파일 저장
+    FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "파일을 찾을 수 없습니다."),
+    FILE_STORAGE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "파일 저장 중 오류가 발생했습니다."),
+    FILE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "파일 접근 권한이 없습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

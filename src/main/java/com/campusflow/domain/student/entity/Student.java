@@ -41,6 +41,9 @@ public class Student {
     @Column(length = 100)
     private String email;
 
+    @Column(length = 100)
+    private String desiredJob;            // 희망 직무 (취업 통계 기준) — 예: "백엔드 개발자"
+
     // ── 학교 포털 연동 ────────────────────────────────────────
     @Column(columnDefinition = "LONGTEXT")
     private String profileImageData;      // 학생증 사진 Base64
@@ -103,6 +106,10 @@ public class Student {
     public void updateAcademic(int grade, int semester) {
         this.grade = grade;
         this.semester = semester;
+    }
+
+    public void updateDesiredJob(String desiredJob) {
+        this.desiredJob = (desiredJob != null && !desiredJob.isBlank()) ? desiredJob.trim() : null;
     }
 
     public void disableIntranetSync() {

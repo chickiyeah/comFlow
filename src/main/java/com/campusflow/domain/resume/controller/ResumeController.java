@@ -2,7 +2,9 @@ package com.campusflow.domain.resume.controller;
 
 import com.campusflow.domain.resume.dto.ResumeRequest;
 import com.campusflow.domain.resume.dto.ResumeResponse;
+import com.campusflow.domain.resume.service.JobResumeService;
 import com.campusflow.domain.resume.service.PdfService;
+import com.campusflow.domain.resume.service.ResumeAiGeneratorService;
 import com.campusflow.domain.resume.service.ResumeService;
 import com.campusflow.global.response.ApiResponse;
 import jakarta.validation.Valid;
@@ -25,6 +27,24 @@ public class ResumeController {
 
     private final ResumeService resumeService;
     private final PdfService pdfService;
+    private final ResumeAiGeneratorService generatorService;
+    private final JobResumeService jobResumeService;
+
+    @PostMapping("/generate")
+    public ApiResponse<com.campusflow.domain.resume.dto.ResumeDraft> generate(
+            @AuthenticationPrincipal String username,
+            @RequestParam(required = false, defaultValue = "general") String template) {
+        return ApiResponse.ok(generatorService.generate(username, template));
+    }
+
+    @PostMapping("/generate-for-job")
+    public ApiResponse<com.campusflow.domain.resume.dto.JobTailoredResumeDraft> generateForJob(
+            @AuthenticationPrincipal String username,
+            @RequestParam String jobType,
+            @RequestParam Long jobId,
+            @RequestParam(required = false, defaultValue = "general") String template) {
+        return ApiResponse.ok(jobResumeService.generateForJob(username, jobType, jobId, template));
+    }
 
     @GetMapping
     public ApiResponse<List<ResumeResponse>> getMyResumes(@AuthenticationPrincipal String username) {
@@ -59,9 +79,18 @@ public class ResumeController {
 
     @GetMapping("/{id}/pdf")
     public ResponseEntity<byte[]> downloadPdf(@AuthenticationPrincipal String username,
-                                               @PathVariable Long id) {
+                                              @PathVariable Long id,
+                                              @RequestParam(required = false) String template) {
         ResumeResponse resume = resumeService.getResume(username, id);
-        byte[] pdf = pdfService.generateResumePdf(resume);
+        com.campusflow.domain.resume.dto.ResumeData data = null;
+        if (resume.resumeData() != null && !resume.resumeData().isBlank()) {
+            try {
+                data = new com.fasterxml.jackson.databind.ObjectMapper()
+                        .readValue(resume.resumeData(), com.campusflow.domain.resume.dto.ResumeData.class);
+            } catch (Exception e) { data = null; } // 파싱 실패 시 구 템플릿 폴백
+        }
+        String tpl = (template != null && !template.isBlank()) ? template : resume.template();
+        byte[] pdf = pdfService.generateResumePdf(resume, data, tpl);
 
         String filename = resume.title().replaceAll("[^a-zA-Z0-9가-힣]", "_") + ".pdf";
 

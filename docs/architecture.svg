@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 820" font-family="'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif">
+  <defs>
+    <marker id="arw" markerWidth="12" markerHeight="12" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#00236f"/>
+    </marker>
+    <style>
+      .band   { fill:#eef3ff; stroke:#00236f; stroke-width:1.6; }
+      .bandAI { fill:#f4fbe6; stroke:#00236f; stroke-width:1.6; }
+      .bandEx { fill:#eaf0fb; stroke:#1b4db3; stroke-width:1.6; }
+      .hdr    { fill:#00236f; }
+      .hdrLime{ fill:#3b6b00; }
+      .hdrTxt { fill:#ffffff; font-size:15px; font-weight:700; }
+      .card   { fill:#ffffff; stroke:#9db6e6; stroke-width:1.2; }
+      .cardTxt{ fill:#12305f; font-size:14px; font-weight:600; }
+      .sub    { fill:#5b6f96; font-size:11.5px; }
+      .chip   { fill:#dbe7ff; stroke:#a9c0ec; stroke-width:1; }
+      .aiNode { fill:#ffffff; stroke:#7bb032; stroke-width:1.6; }
+      .flow   { stroke:#00236f; stroke-width:2; fill:none; }
+      .lbl    { fill:#3a4d78; font-size:11.5px; font-style:italic; }
+    </style>
+  </defs>
+
+  <!-- frame -->
+  <rect x="6" y="6" width="1168" height="808" rx="16" fill="#ffffff" stroke="#c9d8f2" stroke-width="1.5"/>
+
+  <!-- title -->
+  <text x="590" y="46" text-anchor="middle" fill="#00236f" font-size="27" font-weight="800">CampusFlow · 시스템 아키텍처</text>
+  <text x="590" y="70" text-anchor="middle" fill="#5b6f96" font-size="14">AI 기반 통합 학사 · 취업 지원 플랫폼 (Spring Boot · MySQL · RAG)</text>
+
+  <!-- ===== L1 사용자 ===== -->
+  <rect class="band" x="40" y="86" width="1100" height="52" rx="12"/>
+  <rect class="hdr" x="54" y="99" width="86" height="26" rx="13"/>
+  <text class="hdrTxt" x="97" y="117" text-anchor="middle">사용자</text>
+  <rect class="chip" x="470" y="98" width="96" height="28" rx="14"/><text class="cardTxt" x="518" y="117" text-anchor="middle">학생</text>
+  <rect class="chip" x="586" y="98" width="96" height="28" rx="14"/><text class="cardTxt" x="634" y="117" text-anchor="middle">교수</text>
+  <rect class="chip" x="702" y="98" width="110" height="28" rx="14"/><text class="cardTxt" x="757" y="117" text-anchor="middle">관리자</text>
+
+  <line class="flow" x1="590" y1="138" x2="590" y2="164" marker-end="url(#arw)"/>
+  <text class="lbl" x="600" y="156">HTTPS</text>
+
+  <!-- ===== L2 프론트엔드 ===== -->
+  <rect class="band" x="40" y="168" width="1100" height="84" rx="12"/>
+  <rect class="hdr" x="54" y="180" width="150" height="26" rx="13"/>
+  <text class="hdrTxt" x="129" y="198" text-anchor="middle">프론트엔드 (Web)</text>
+  <rect class="card" x="66"  y="214" width="245" height="30" rx="8"/><text class="cardTxt" x="188" y="234" text-anchor="middle">React 18 + Vite</text>
+  <rect class="card" x="326" y="214" width="245" height="30" rx="8"/><text class="cardTxt" x="448" y="234" text-anchor="middle">Tailwind CSS</text>
+  <rect class="card" x="586" y="214" width="270" height="30" rx="8"/><text class="cardTxt" x="721" y="234" text-anchor="middle">react-i18next · 5개 언어</text>
+  <rect class="card" x="871" y="214" width="245" height="30" rx="8"/><text class="cardTxt" x="993" y="234" text-anchor="middle">axios · JWT 인증</text>
+
+  <line class="flow" x1="590" y1="252" x2="590" y2="278" marker-end="url(#arw)"/>
+  <text class="lbl" x="600" y="270">REST API / JSON</text>
+
+  <!-- ===== L3 백엔드 ===== -->
+  <rect class="band" x="40" y="282" width="1100" height="150" rx="12"/>
+  <rect class="hdr" x="54" y="294" width="340" height="26" rx="13"/>
+  <text class="hdrTxt" x="224" y="312" text-anchor="middle">백엔드 · Spring Boot 3.3.5 / Java 17</text>
+  <!-- infra row -->
+  <rect class="card" x="66"  y="330" width="245" height="30" rx="8"/><text class="cardTxt" x="188" y="350" text-anchor="middle">Spring Security + JWT</text>
+  <rect class="card" x="326" y="330" width="245" height="30" rx="8"/><text class="cardTxt" x="448" y="350" text-anchor="middle">REST Controller</text>
+  <rect class="card" x="586" y="330" width="245" height="30" rx="8"/><text class="cardTxt" x="708" y="350" text-anchor="middle">Service Layer</text>
+  <rect class="card" x="846" y="330" width="270" height="30" rx="8"/><text class="cardTxt" x="981" y="350" text-anchor="middle">JPA / Hibernate</text>
+  <!-- domain chips -->
+  <rect class="chip" x="58"  y="372" width="205" height="48" rx="9"/>
+  <text class="cardTxt" x="160" y="392" text-anchor="middle">학사 관리</text><text class="sub" x="160" y="409" text-anchor="middle">성적 · 출결 · 졸업요건</text>
+  <rect class="chip" x="275" y="372" width="215" height="48" rx="9"/>
+  <text class="cardTxt" x="382" y="392" text-anchor="middle">취업 지원</text><text class="sub" x="382" y="409" text-anchor="middle">AI자소서 · 채용 · 로드맵 · 자격증</text>
+  <rect class="chip" x="502" y="372" width="185" height="48" rx="9"/>
+  <text class="cardTxt" x="594" y="392" text-anchor="middle">포트폴리오 · 이력서</text><text class="sub" x="594" y="409" text-anchor="middle">GitHub 연동 · PDF</text>
+  <rect class="chip" x="699" y="372" width="195" height="48" rx="9"/>
+  <text class="cardTxt" x="796" y="392" text-anchor="middle">LMS</text><text class="sub" x="796" y="409" text-anchor="middle">퀴즈 · AI채점 · 게임화 · 수료증</text>
+  <rect class="chip" x="906" y="372" width="210" height="48" rx="9"/>
+  <text class="cardTxt" x="1011" y="392" text-anchor="middle">AI 학생 어드바이저</text><text class="sub" x="1011" y="409" text-anchor="middle">성적·출결 분석 → 맞춤 조언</text>
+
+  <!-- bus to L4 -->
+  <line class="flow" x1="590" y1="432" x2="590" y2="448"/>
+  <line class="flow" x1="320" y1="448" x2="950" y2="448"/>
+  <line class="flow" x1="320" y1="448" x2="320" y2="470" marker-end="url(#arw)"/>
+  <line class="flow" x1="950" y1="448" x2="950" y2="470" marker-end="url(#arw)"/>
+
+  <!-- ===== L4 AI 계층 + 데이터 ===== -->
+  <rect class="bandAI" x="40" y="474" width="690" height="150" rx="12"/>
+  <rect class="hdrLime" x="54" y="486" width="200" height="26" rx="13"/>
+  <text class="hdrTxt" x="154" y="504" text-anchor="middle">AI 계층</text>
+  <text class="cardTxt" x="270" y="504" text-anchor="start">AiFacadeService · LLM 폴백 체인</text>
+  <!-- fallback flow -->
+  <rect class="aiNode" x="64"  y="522" width="180" height="46" rx="9"/>
+  <text class="cardTxt" x="154" y="542" text-anchor="middle">① jvision.ai</text><text class="sub" x="154" y="559" text-anchor="middle">자체 vLLM</text>
+  <line class="flow" x1="248" y1="545" x2="278" y2="545" marker-end="url(#arw)"/>
+  <rect class="aiNode" x="282" y="522" width="150" height="46" rx="9"/>
+  <text class="cardTxt" x="357" y="542" text-anchor="middle">② Ollama</text><text class="sub" x="357" y="559" text-anchor="middle">로컬 LLM</text>
+  <line class="flow" x1="436" y1="545" x2="466" y2="545" marker-end="url(#arw)"/>
+  <rect class="aiNode" x="470" y="522" width="150" height="46" rx="9"/>
+  <text class="cardTxt" x="545" y="542" text-anchor="middle">③ Gemini</text><text class="sub" x="545" y="559" text-anchor="middle">상용 API</text>
+  <!-- RAG -->
+  <rect class="card" x="64" y="580" width="556" height="32" rx="8" stroke="#7bb032"/>
+  <text class="cardTxt" x="342" y="601" text-anchor="middle">KomjeongRagService · RAG (학과 자료 약 35K 청크 → 근거 기반 취업 로드맵)</text>
+
+  <!-- Data -->
+  <rect class="band" x="760" y="474" width="380" height="150" rx="12"/>
+  <rect class="hdr" x="774" y="486" width="150" height="26" rx="13"/>
+  <text class="hdrTxt" x="849" y="504" text-anchor="middle">데이터 계층</text>
+  <ellipse cx="950" cy="535" rx="66" ry="14" fill="#dbe7ff" stroke="#00236f" stroke-width="1.6"/>
+  <path d="M884,535 v46 a66,14 0 0 0 132,0 v-46" fill="#eef3ff" stroke="#00236f" stroke-width="1.6"/>
+  <text class="cardTxt" x="950" y="560" text-anchor="middle" font-size="16">MySQL 8</text>
+  <text class="sub" x="950" y="600" text-anchor="middle">통합 데이터베이스 (JPA ddl-auto)</text>
+
+  <line class="flow" x1="590" y1="624" x2="590" y2="650" marker-end="url(#arw)"/>
+  <text class="lbl" x="600" y="642">Open API · 스크래핑</text>
+
+  <!-- ===== L5 외부 연동 ===== -->
+  <rect class="bandEx" x="40" y="654" width="1100" height="106" rx="12"/>
+  <rect class="hdr" x="54" y="666" width="130" height="26" rx="13"/>
+  <text class="hdrTxt" x="119" y="684" text-anchor="middle">외부 연동</text>
+  <rect class="card" x="58"  y="700" width="205" height="48" rx="9"/>
+  <text class="cardTxt" x="160" y="720" text-anchor="middle">채용 공고 API</text><text class="sub" x="160" y="737" text-anchor="middle">고용24 · 잡코리아 · 사람인 · 워크넷</text>
+  <rect class="card" x="275" y="700" width="150" height="48" rx="9"/>
+  <text class="cardTxt" x="350" y="720" text-anchor="middle">자격증</text><text class="sub" x="350" y="737" text-anchor="middle">Q-Net 시험일정</text>
+  <rect class="card" x="437" y="700" width="185" height="48" rx="9"/>
+  <text class="cardTxt" x="529" y="720" text-anchor="middle">학교 포털</text><text class="sub" x="529" y="737" text-anchor="middle">성적 · 출결 실연동</text>
+  <rect class="card" x="634" y="700" width="185" height="48" rx="9"/>
+  <text class="cardTxt" x="726" y="720" text-anchor="middle">GitHub API</text><text class="sub" x="726" y="737" text-anchor="middle">포트폴리오 분석</text>
+  <rect class="card" x="831" y="700" width="285" height="48" rx="9"/>
+  <text class="cardTxt" x="973" y="720" text-anchor="middle">메일 서버</text><text class="sub" x="973" y="737" text-anchor="middle">이메일 인증 (DKIM 서명)</text>
+
+  <!-- footer: cross-cutting -->
+  <rect class="chip" x="330" y="774" width="240" height="30" rx="15" fill="#00236f" stroke="none"/>
+  <text x="450" y="794" text-anchor="middle" fill="#ffffff" font-size="12.5" font-weight="600">보안 · .env 시크릿 분리 / JWT 인증</text>
+  <rect class="chip" x="590" y="774" width="240" height="30" rx="15" fill="#bff365" stroke="none"/>
+  <text x="710" y="794" text-anchor="middle" fill="#12305f" font-size="12.5" font-weight="700">빌드 · Maven 의존성 자동 관리</text>
+</svg>

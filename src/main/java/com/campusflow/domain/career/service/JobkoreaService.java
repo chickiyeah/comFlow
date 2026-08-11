@@ -8,6 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -54,7 +56,9 @@ public class JobkoreaService {
                     .header("Content-Type", "application/json")
                     .header("Accept", "application/json")
                     .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36")
-                    .header("Referer", "https://www.jobkorea.co.kr/Search?stext=" + keyword + "&tabType=recruit")
+                    // Referer 헤더에는 ASCII만 허용 — 한글 키워드는 URL 인코딩(미인코딩 시 'invalid header value' 오류로 한글 검색 전체 실패)
+                    .header("Referer", "https://www.jobkorea.co.kr/Search?stext="
+                            + URLEncoder.encode(keyword, StandardCharsets.UTF_8) + "&tabType=recruit")
                     .header("Origin", "https://www.jobkorea.co.kr")
                     .body(body)
                     .retrieve()
@@ -74,13 +78,14 @@ public class JobkoreaService {
         if (content == null || !content.isArray()) return results;
 
         for (JsonNode job : content) {
-            String createdAt = job.path("createdAt").asText("");
+            String deadlineText = job.path("applicationPeriod").path("end").asText("");
             LocalDate deadline = null;
-            if (createdAt.length() >= 10) {
-                try { deadline = LocalDate.parse(createdAt.substring(0, 10)); } catch (DateTimeParseException ignored) {}
+            if (deadlineText.length() >= 10) {
+                try { deadline = LocalDate.parse(deadlineText.substring(0, 10)); } catch (DateTimeParseException ignored) {}
             }
 
-            String jobNo = job.path("legacyJobNo").asText();
+            // GI_Read 상세 URL은 modern 'id'를 써야 함. legacyJobNo는 구 번호라 404(없는 공고)가 뜸.
+            String jobNo = job.path("id").asText();
             String careerCode = job.path("careerType").asText("");
             String careerLabel = switch (careerCode) {
                 case "0" -> "경력무관";

@@ -1,20 +1,37 @@
-/* ── Google Fonts ─────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap');
+/* ── Google Fonts (Meridian: Space Grotesk + Inter + Noto Sans KR/Myanmar) ── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Noto+Sans+KR:wght@400;500;700&family=Noto+Sans+Myanmar:wght@400;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ── Base ─────────────────────────────────────────────────── */
-body {
-  font-family: 'Inter', sans-serif;
-  background-color: #f7f9fb;
-  color: #191c1e;
+/* ── Meridian 토큰 (var 직접 참조가 필요한 곳을 위해) ───────── */
+:root {
+  --primary: #23255E;
+  --primary-light: #4B4FD6;
+  --accent: #A78BFA;
+  --accent-dark: #7C5FE0;
+  --surface-card: #ffffff;
+  --border-card: #d4d5e8;
+  --text-body: #181a2e;
+  --text-muted: #4d4f6b;
+}
+.dark {
+  --surface-card: #1c1e3a;
+  --border-card: #33355c;
+  --text-body: #e6e6f5;
+  --text-muted: #a6a8c9;
 }
 
+/* ── Base ─────────────────────────────────────────────────── */
+body {
+  font-family: 'Inter', 'Noto Sans KR', 'Noto Sans Myanmar', sans-serif;
+  background-color: #f6f7fb;
+  color: #181a2e;
+}
 .dark body {
-  background-color: #12151c;
-  color: #e6e8ea;
+  background-color: #14152b;
+  color: #e6e6f5;
 }
 
 /* ── Material Symbols ─────────────────────────────────────── */
@@ -28,13 +45,13 @@ body {
   font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-/* ── Design System Components ─────────────────────────────── */
+/* ── Design System Components (Meridian) ──────────────────── */
 @layer components {
 
-  /* Card — Outlined style, navy-tint shadow */
+  /* Card — outlined, indigo-tint shadow */
   .card {
-    @apply bg-white dark:bg-[#1e2432]
-           rounded-xl border border-outline-variant dark:border-[#2e3545]
+    @apply bg-surface-container-lowest dark:bg-[#1c1e3a]
+           rounded-xl border border-outline-variant dark:border-[#33355c]
            shadow-card hover:shadow-card-md
            transition-shadow duration-200;
   }
@@ -42,19 +59,19 @@ body {
   /* Nav item (SideNav) */
   .nav-item {
     @apply flex flex-col items-center justify-center
-           text-primary-fixed-dim dark:text-[#8899bb]
+           text-primary-fixed-dim dark:text-[#a6a8c9]
            hover:text-white cursor-pointer
            transition-all duration-200 ease-in-out w-full py-2;
   }
   .nav-item-active {
     @apply flex flex-col items-center justify-center
            bg-secondary-fixed text-on-secondary-fixed
-           rounded-xl shadow-lime
+           rounded-xl shadow-spark
            cursor-pointer w-14 h-14 mx-auto
            transition-all duration-200;
   }
 
-  /* Primary button — Deep Navy fill */
+  /* Primary button — Deep Indigo fill */
   .btn-primary {
     @apply bg-primary text-on-primary
            px-6 py-2.5 rounded-full
@@ -65,26 +82,26 @@ body {
            transition-all duration-150;
   }
 
-  /* Hero / CTA button — Accent Lime fill */
+  /* Hero / CTA button — Spark accent fill */
   .btn-hero {
     @apply bg-secondary-fixed text-on-secondary-fixed
            px-6 py-2.5 rounded-full
            text-label-md font-semibold
            flex items-center gap-2
-           shadow-lime hover:shadow-[0_0_28px_rgba(191,243,101,0.5)]
+           shadow-spark hover:shadow-spark-hover
            hover:scale-[1.03] active:scale-95
            transition-all duration-150;
   }
 
   /* Secondary button — outlined */
   .btn-secondary {
-    @apply border border-outline-variant dark:border-[#2e3545]
+    @apply border border-outline-variant dark:border-[#33355c]
            text-primary dark:text-primary-fixed-dim
            bg-transparent
            px-6 py-2.5 rounded-full
            text-label-md font-semibold
            flex items-center gap-2
-           hover:bg-surface-container dark:hover:bg-[#1e2432]
+           hover:bg-surface-container dark:hover:bg-[#25274a]
            hover:scale-[1.03] active:scale-95
            transition-all duration-150;
   }
@@ -92,26 +109,26 @@ body {
   /* Input — outlined style */
   .input {
     @apply w-full px-4 py-3
-           bg-surface-container-low dark:bg-[#1e2432]
-           border border-outline-variant dark:border-[#2e3545]
-           text-on-surface dark:text-[#e6e8ea]
+           bg-surface-container-low dark:bg-[#1c1e3a]
+           border border-outline-variant dark:border-[#33355c]
+           text-on-surface dark:text-[#e6e6f5]
            rounded-lg text-body-md
-           focus:outline-none focus:ring-2 focus:ring-primary/30 dark:focus:ring-primary-fixed-dim/30
+           focus:outline-none focus:ring-2 focus:ring-accent/40 dark:focus:ring-accent/40
            focus:border-primary dark:focus:border-primary-fixed-dim
-           placeholder:text-outline dark:placeholder:text-[#555f72]
+           placeholder:text-outline dark:placeholder:text-[#6b6d99]
            transition-all duration-150;
   }
 
   /* Chip — pill tag */
   .chip {
     @apply px-3 py-1 rounded-full text-label-md font-medium
-           bg-surface-container dark:bg-[#2a3244]
-           text-on-surface-variant dark:text-[#a4acc5]
-           border border-outline-variant dark:border-[#2e3545];
+           bg-surface-container dark:bg-[#25274a]
+           text-on-surface-variant dark:text-[#a6a8c9]
+           border border-outline-variant dark:border-[#33355c];
   }
   .chip-active {
     @apply px-3 py-1 rounded-full text-label-md font-medium
            bg-secondary-fixed text-on-secondary-fixed
-           shadow-lime;
+           shadow-spark;
   }
 }

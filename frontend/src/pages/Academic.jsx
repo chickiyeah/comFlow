@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
+import { useTranslation, Trans } from 'react-i18next'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts'
 import Layout from '../components/layout/Layout'
-import { getMyGrades } from '../api/grade'
+import { getMyGrades, downloadTranscriptPdf } from '../api/grade'
 import { getMyAttendance } from '../api/attendance'
 import { checkGraduation } from '../api/graduation'
 import { getMyAwards, createAward, deleteAward } from '../api/award'
@@ -10,9 +10,14 @@ import { getPortalGradeTerms, getPortalGradeDetail, getPortalAttendance, getPort
 import { getGradeTrend, getAttendanceSummary } from '../api/analytics'
 import { getMyReviews, createReview, deleteReview } from '../api/review'
 import { getProfile } from '../api/profile'
+import { getCurrentTerm, recentYears } from '../utils/term'
+import AiStudyPanel from '../components/academic/AiStudyPanel'
 
 const AWARD_LEVELS = ['GOLD','SILVER','BRONZE','ENCOURAGEMENT','PARTICIPATION']
-const AWARD_LEVEL_LABEL = { GOLD:'금상', SILVER:'은상', BRONZE:'동상', ENCOURAGEMENT:'장려상', PARTICIPATION:'입상' }
+const AWARD_LEVEL_I18N = {
+  GOLD:'academic.awardLevelGold', SILVER:'academic.awardLevelSilver', BRONZE:'academic.awardLevelBronze',
+  ENCOURAGEMENT:'academic.awardLevelEncouragement', PARTICIPATION:'academic.awardLevelParticipation',
+}
 const AWARD_LEVEL_COLOR = {
   GOLD:          'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400',
   SILVER:        'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300',
@@ -28,11 +33,11 @@ function AttendanceBar({ status }) {
 }
 
 const SCHED_DAYS = [
-  { key: 'W_MON_SBJT_CD', label: '월' },
-  { key: 'W_TUE_SBJT_CD', label: '화' },
-  { key: 'W_WED_SBJT_CD', label: '수' },
-  { key: 'W_THU_SBJT_CD', label: '목' },
-  { key: 'W_FRI_SBJT_CD', label: '금' },
+  { key: 'W_MON_SBJT_CD', i18n: 'academic.dayMon' },
+  { key: 'W_TUE_SBJT_CD', i18n: 'academic.dayTue' },
+  { key: 'W_WED_SBJT_CD', i18n: 'academic.dayWed' },
+  { key: 'W_THU_SBJT_CD', i18n: 'academic.dayThu' },
+  { key: 'W_FRI_SBJT_CD', i18n: 'academic.dayFri' },
 ]
 const SCHED_COLORS = [
   'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200',
@@ -51,6 +56,7 @@ function parseCell(v) {
 }
 
 function ScheduleGrid({ data }) {
+  const { t } = useTranslation()
   const rows = data.filter(r => SCHED_DAYS.some(d => r[d.key]))
   const colorMap = {}
   let ci = 0
@@ -58,15 +64,15 @@ function ScheduleGrid({ data }) {
     const c = parseCell(r[d.key])
     if (c && !colorMap[c.name]) colorMap[c.name] = SCHED_COLORS[ci++ % SCHED_COLORS.length]
   }))
-  if (!rows.length) return <p className="text-center py-8 text-outline dark:text-slate-400">시간표 데이터가 없습니다.</p>
+  if (!rows.length) return <p className="text-center py-8 text-outline dark:text-slate-400">{t('academic.noScheduleData')}</p>
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="bg-surface-container dark:bg-slate-800">
-            <th className="border border-slate-200 dark:border-slate-700 px-3 py-2 text-outline dark:text-slate-400 font-bold text-xs w-20 text-center">교시</th>
+            <th className="border border-slate-200 dark:border-slate-700 px-3 py-2 text-outline dark:text-slate-400 font-bold text-xs w-20 text-center">{t('academic.period')}</th>
             {SCHED_DAYS.map(d => (
-              <th key={d.key} className="border border-slate-200 dark:border-slate-700 px-3 py-2 text-primary dark:text-white font-bold text-center min-w-[110px]">{d.label}</th>
+              <th key={d.key} className="border border-slate-200 dark:border-slate-700 px-3 py-2 text-primary dark:text-white font-bold text-center min-w-[110px]">{t(d.i18n)}</th>
             ))}
           </tr>
         </thead>
@@ -100,6 +106,7 @@ function ScheduleGrid({ data }) {
 }
 
 function PasswordModal({ title, onConfirm, onClose, loading }) {
+  const { t } = useTranslation()
   const [pw, setPw] = useState('')
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
@@ -109,21 +116,21 @@ function PasswordModal({ title, onConfirm, onClose, loading }) {
           <span className="material-symbols-outlined text-secondary-fixed">lock</span>{title}
         </h3>
         <p className="text-sm text-on-surface-variant dark:text-slate-400 mb-4">
-          학교 포털 비밀번호를 입력하세요. 입력한 비밀번호는 저장되어 다음부터는 자동으로 조회됩니다.
+          {t('academic.portalPwDesc')}
         </p>
         <input
           type="password" value={pw} onChange={e => setPw(e.target.value)}
-          placeholder="학교 포털 비밀번호"
+          placeholder={t('academic.portalPwPlaceholder')}
           className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-white rounded-xl text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-primary/30"
           onKeyDown={e => e.key === 'Enter' && pw && onConfirm(pw)}
           autoFocus
         />
         <div className="flex gap-3">
-          <button onClick={onClose} className="flex-1 py-3 border border-outline-variant dark:border-slate-700 text-on-surface-variant dark:text-slate-300 rounded-xl text-sm font-bold">취소</button>
+          <button onClick={onClose} className="flex-1 py-3 border border-outline-variant dark:border-slate-700 text-on-surface-variant dark:text-slate-300 rounded-xl text-sm font-bold">{t('common.cancel')}</button>
           <button onClick={() => pw && onConfirm(pw)} disabled={!pw || loading}
             className="flex-1 py-3 bg-primary text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2">
             {loading && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-            조회
+            {t('academic.lookup')}
           </button>
         </div>
       </div>
@@ -133,17 +140,19 @@ function PasswordModal({ title, onConfirm, onClose, loading }) {
 
 export default function Academic() {
   const { t } = useTranslation()
-  const TABS = [
-    { key: 'grade',           icon: 'grade',             label: '성적'         },
-    { key: 'portal_grade',    icon: 'history_edu',       label: '포털 성적'    },
-    { key: 'attendance',      icon: 'calendar_today',    label: '출결'         },
-    { key: 'portal_attend',   icon: 'fact_check',        label: '포털 출결'    },
-    { key: 'portal_schedule', icon: 'event_note',        label: '포털 시간표'  },
-    { key: 'graduation',      icon: 'school',            label: '졸업요건'     },
-    { key: 'analysis',        icon: 'bar_chart',         label: '학습 분석'    },
-    { key: 'reviews',         icon: 'rate_review',       label: '강의 리뷰'    },
-    { key: 'awards',          icon: 'workspace_premium', label: '수상내역'     },
+  const ALL_TABS = [
+    { key: 'grade',           icon: 'grade',             i18n: 'academic.tabGrade'          },
+    { key: 'portal_grade',    icon: 'history_edu',       i18n: 'academic.tabPortalGrade'    },
+    { key: 'attendance',      icon: 'calendar_today',    i18n: 'academic.tabAttendance'     },
+    { key: 'portal_attend',   icon: 'fact_check',        i18n: 'academic.tabPortalAttend'   },
+    { key: 'portal_schedule', icon: 'event_note',        i18n: 'academic.tabPortalSchedule' },
+    { key: 'graduation',      icon: 'school',            i18n: 'academic.tabGraduation'     },
+    { key: 'analysis',        icon: 'bar_chart',         i18n: 'academic.tabAnalysis'       },
+    { key: 'planner',         icon: 'auto_awesome',      i18n: 'academic.tabPlanner'        },
+    { key: 'reviews',         icon: 'rate_review',       i18n: 'academic.tabReviews'        },
+    { key: 'awards',          icon: 'workspace_premium', i18n: 'academic.tabAwards'         },
   ]
+  const PORTAL_TAB_KEYS = ['portal_grade', 'portal_attend', 'portal_schedule']
 
   const [tab, setTab]           = useState('grade')
   const [grades, setGrades]     = useState(null)
@@ -160,8 +169,8 @@ export default function Academic() {
 
   // 포털 시간표
   const [portalSchedule, setPortalSchedule]   = useState(null)
-  const [scheduleYear, setScheduleYear]       = useState('2026')
-  const [scheduleSemester, setScheduleSemester] = useState('SU002001')
+  const [scheduleYear, setScheduleYear]       = useState(String(getCurrentTerm().year))
+  const [scheduleSemester, setScheduleSemester] = useState(getCurrentTerm().smrCode)
   const [scheduleLoading, setScheduleLoading] = useState(false)
 
   // 포털 출결
@@ -170,6 +179,24 @@ export default function Academic() {
   const [attendLoading, setAttendLoading]   = useState(false)
   const [hasPortalPw, setHasPortalPw]         = useState(false)
   const [portalSynced, setPortalSynced]       = useState(false)   // intranetSyncEnabled
+  const [transcriptLoading, setTranscriptLoading] = useState(false)
+
+  const handleTranscript = async () => {
+    if (transcriptLoading) return
+    setTranscriptLoading(true)
+    try {
+      const blob = await downloadTranscriptPdf()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = '성적증명서.pdf'
+      document.body.appendChild(a); a.click(); a.remove()
+      URL.revokeObjectURL(url)
+    } catch {
+      alert(t('academic.transcriptError'))
+    } finally {
+      setTranscriptLoading(false)
+    }
+  }
 
   // 마운트 시 포털 연동 상태 확인
   useEffect(() => {
@@ -178,6 +205,9 @@ export default function Academic() {
       if (r.data?.intranetSyncEnabled) setPortalSynced(true)
     }).catch(() => {})
   }, [])
+
+  // 포털 미연동 시 포털 의존 탭은 렌더링하지 않는다
+  const TABS = portalSynced ? ALL_TABS : ALL_TABS.filter(tb => !PORTAL_TAB_KEYS.includes(tb.key))
 
   // 학습 분석
   const [gradeTrend, setGradeTrend]         = useState([])
@@ -278,7 +308,7 @@ export default function Academic() {
       setShowPwModal(false)
       setHasPortalPw(true)
     } catch {
-      alert('출결 조회 실패. 비밀번호를 확인하거나 포털 연동 후 다시 시도하세요.')
+      alert(t('academic.attendLookupFailed'))
     } finally {
       setAttendLoading(false)
     }
@@ -291,21 +321,21 @@ export default function Academic() {
     return 'bg-error-container dark:bg-error/20 text-error'
   }
 
-  const smrLabel = (smr) => smr === 'SU002001' ? '1학기' : smr === 'SU002002' ? '2학기' : smr ?? ''
+  const smrLabel = (smr) => smr === 'SU002001' ? t('academic.semester1') : smr === 'SU002002' ? t('academic.semester2') : smr ?? ''
 
   return (
-    <Layout title="학사 정보 서비스">
+    <Layout title={t('academic.layoutTitle')}>
       <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h2 className="font-['Space_Grotesk'] text-2xl font-bold text-primary dark:text-white">나의 학업 대시보드</h2>
-          <p className="text-on-surface-variant dark:text-slate-400 text-sm mt-1">성적, 출결 현황 및 졸업요건을 확인하세요.</p>
+          <h2 className="font-['Space_Grotesk'] text-2xl font-bold text-primary dark:text-white">{t('academic.title')}</h2>
+          <p className="text-on-surface-variant dark:text-slate-400 text-sm mt-1">{t('academic.subtitle')}</p>
         </div>
         <div className="flex gap-2">
-          <button className="btn-primary text-sm">
-            <span className="material-symbols-outlined text-[18px]">download</span>증명서 발급
+          <button onClick={handleTranscript} disabled={transcriptLoading} className="btn-primary text-sm disabled:opacity-60">
+            <span className="material-symbols-outlined text-[18px]">download</span>{t('academic.issueCertificate')}
           </button>
-          <button className="btn-secondary text-sm">
-            <span className="material-symbols-outlined text-[18px]">print</span>성적표
+          <button onClick={handleTranscript} disabled={transcriptLoading} className="btn-secondary text-sm disabled:opacity-60">
+            <span className="material-symbols-outlined text-[18px]">print</span>{t('academic.transcript')}
           </button>
         </div>
       </div>
@@ -314,7 +344,7 @@ export default function Academic() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="card p-5">
           <div className="flex justify-between items-center mb-3">
-            <span className="text-on-surface-variant dark:text-slate-400 text-label-md">전체 평점</span>
+            <span className="text-on-surface-variant dark:text-slate-400 text-label-md">{t('academic.gpa')}</span>
             <span className="material-symbols-outlined text-primary dark:text-secondary-fixed">military_tech</span>
           </div>
           <div className="flex items-baseline gap-1">
@@ -326,47 +356,49 @@ export default function Academic() {
         </div>
         <div className="card p-5">
           <div className="flex justify-between items-center mb-3">
-            <span className="text-on-surface-variant dark:text-slate-400 text-label-md">출석률</span>
+            <span className="text-on-surface-variant dark:text-slate-400 text-label-md">{t('academic.attendance')}</span>
             <span className="material-symbols-outlined text-secondary dark:text-secondary-fixed">task_alt</span>
           </div>
           <div className="text-3xl font-black text-secondary dark:text-white font-['Space_Grotesk']">
             {attendance ? `${Math.round((attendance.totalPresent / Math.max(attendance.totalPresent + attendance.totalAbsent + attendance.totalLate, 1)) * 100)}%` : '—'}
           </div>
         </div>
+        {portalSynced && (
         <div className="card p-5">
           <div className="flex justify-between items-center mb-3">
-            <span className="text-on-surface-variant dark:text-slate-400 text-label-md">포털 출결률</span>
+            <span className="text-on-surface-variant dark:text-slate-400 text-label-md">{t('academic.portalAttendRate')}</span>
             <span className="material-symbols-outlined text-primary dark:text-secondary-fixed">fact_check</span>
           </div>
           <div className="text-3xl font-black text-primary dark:text-white font-['Space_Grotesk']">
             {portalAttend?.summary?.attendance_rate != null ? `${portalAttend.summary.attendance_rate}%` : '—'}
           </div>
-          {!portalAttend && <p className="text-[11px] text-outline dark:text-slate-500 mt-1">포털 출결 탭에서 조회</p>}
+          {!portalAttend && <p className="text-[11px] text-outline dark:text-slate-500 mt-1">{t('academic.checkInPortalAttendTab')}</p>}
         </div>
+        )}
         <div className="card p-5">
           <div className="flex justify-between items-center mb-3">
-            <span className="text-on-surface-variant dark:text-slate-400 text-label-md">이수 학점</span>
+            <span className="text-on-surface-variant dark:text-slate-400 text-label-md">{t('academic.earnedCredits')}</span>
             <span className="material-symbols-outlined text-primary dark:text-secondary-fixed">school</span>
           </div>
           <div className="text-3xl font-black text-primary dark:text-white font-['Space_Grotesk']">
             {graduation?.totalEarnedCredits ?? '—'}
           </div>
-          {graduation && <p className="text-[11px] text-outline dark:text-slate-500 mt-1">/ {graduation.requiredTotalCredits}학점 필요</p>}
+          {graduation && <p className="text-[11px] text-outline dark:text-slate-500 mt-1">{t('academic.creditsRequired', { count: graduation.requiredTotalCredits })}</p>}
         </div>
       </div>
 
       {/* Tabs */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-outline-variant dark:border-slate-800 overflow-hidden">
         <div className="flex border-b border-slate-100 dark:border-slate-800 px-2 overflow-x-auto">
-          {TABS.map(t => (
-            <button key={t.key} onClick={() => setTab(t.key)}
+          {TABS.map(tb => (
+            <button key={tb.key} onClick={() => setTab(tb.key)}
               className={`flex items-center gap-2 px-4 py-4 text-sm font-bold border-b-2 shrink-0 transition-colors ${
-                tab === t.key
+                tab === tb.key
                   ? 'border-primary dark:border-secondary-fixed text-primary dark:text-secondary-fixed'
                   : 'border-transparent text-on-surface-variant dark:text-slate-400 hover:text-primary dark:hover:text-white'
               }`}>
-              <span className="material-symbols-outlined text-[18px]">{t.icon}</span>
-              <span className="hidden md:inline">{t.label}</span>
+              <span className="material-symbols-outlined text-[18px]">{tb.icon}</span>
+              <span className="hidden md:inline">{t(tb.i18n)}</span>
             </button>
           ))}
         </div>
@@ -384,14 +416,14 @@ export default function Academic() {
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-slate-100 dark:border-slate-800">
-                    {['교과목명','이수구분','학점','성적','등급'].map((h, i) => (
-                      <th key={h} className={`py-3 px-3 text-label-md text-outline dark:text-slate-500 uppercase tracking-wider ${i >= 2 ? 'text-center' : ''}`}>{h}</th>
+                    {[t('academic.colSubject'),t('academic.colCategory'),t('academic.colCredits'),t('academic.colScore'),t('academic.colGrade')].map((h, i) => (
+                      <th key={i} className={`py-3 px-3 text-label-md text-outline dark:text-slate-500 uppercase tracking-wider ${i >= 2 ? 'text-center' : ''}`}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                   {(grades?.grades ?? []).length === 0 ? (
-                    <tr><td colSpan={5} className="py-12 text-center text-on-surface-variant dark:text-slate-400">성적 데이터가 없습니다. 포털 성적 탭을 이용하세요.</td></tr>
+                    <tr><td colSpan={5} className="py-12 text-center text-on-surface-variant dark:text-slate-400">{portalSynced ? t('academic.noGradeDataUsePortal') : t('academic.noGradeData')}</td></tr>
                   ) : (grades?.grades ?? []).map((g, i) => (
                     <tr key={i} className="hover:bg-surface-container-low dark:hover:bg-slate-800 transition-colors">
                       <td className="py-4 px-3">
@@ -399,7 +431,7 @@ export default function Academic() {
                         <div className="text-[11px] text-outline dark:text-slate-500">{g.subjectCode}</div>
                       </td>
                       <td className="py-4 px-3">
-                        <span className="bg-surface-container dark:bg-slate-700 text-on-surface-variant dark:text-slate-300 px-2 py-1 rounded text-[11px]">전공</span>
+                        <span className="bg-surface-container dark:bg-slate-700 text-on-surface-variant dark:text-slate-300 px-2 py-1 rounded text-[11px]">{t('academic.major')}</span>
                       </td>
                       <td className="py-4 px-3 text-center font-medium text-on-surface dark:text-white">{g.credits}</td>
                       <td className="py-4 px-3 text-center font-bold text-primary dark:text-secondary-fixed">{Math.round((g.gradePoint ?? 0) * 20)}</td>
@@ -423,23 +455,18 @@ export default function Academic() {
                   <span className="material-symbols-outlined text-[64px] text-outline dark:text-slate-600">history_edu</span>
                   {portalSynced ? (
                     <>
-                      <p className="mt-3 font-bold text-primary dark:text-white">포털 세션이 만료되었습니다.</p>
-                      <p className="text-sm text-on-surface-variant dark:text-slate-400 mt-1">프로필 → <strong>지금 다시 동기화</strong>를 눌러주세요.</p>
+                      <p className="mt-3 font-bold text-primary dark:text-white">{t('academic.portalSessionExpired')}</p>
+                      <p className="text-sm text-on-surface-variant dark:text-slate-400 mt-1"><Trans i18nKey="academic.portalResyncHint" components={{ strong: <strong /> }} /></p>
                     </>
                   ) : (
                     <>
-                      <p className="mt-3 font-bold text-primary dark:text-white">포털 연동 후 이용 가능합니다.</p>
-                      <p className="text-sm text-on-surface-variant dark:text-slate-400 mt-1">프로필 → 학교 포털 연동을 먼저 진행하세요.</p>
+                      <p className="mt-3 font-bold text-primary dark:text-white">{t('academic.portalLinkRequired')}</p>
+                      <p className="text-sm text-on-surface-variant dark:text-slate-400 mt-1">{t('academic.portalLinkFirst')}</p>
                     </>
                   )}
                 </div>
               ) : (
                 <>
-                  {/* 임시 디버그 — 실제 필드 확인용 */}
-                  <details className="mb-4 text-xs text-outline dark:text-slate-400">
-                    <summary className="cursor-pointer">DEBUG: terms[0] raw data</summary>
-                    <pre className="bg-slate-100 dark:bg-slate-800 p-2 rounded mt-1 overflow-x-auto">{JSON.stringify(portalTerms[0], null, 2)}</pre>
-                  </details>
                   {/* 학기 선택 */}
                   <div className="flex gap-2 flex-wrap mb-6">
                     {portalTerms.map((term, i) => (
@@ -450,7 +477,7 @@ export default function Academic() {
                             ? 'bg-primary text-white dark:bg-secondary-fixed dark:text-[#131f00]'
                             : 'bg-surface-container dark:bg-slate-800 text-on-surface-variant dark:text-slate-300 hover:bg-primary/10'
                         }`}>
-                        {term.YEAR ?? term.year}년 {smrLabel(term.SMR ?? term.smr)}
+                        {t('academic.yearLabel', { year: term.YEAR ?? term.year })} {smrLabel(term.SMR ?? term.smr)}
                         {(term.GPA_AVG ?? term.gpa_avg) && <span className="ml-2 opacity-70">GPA {parseFloat(term.GPA_AVG ?? term.gpa_avg).toFixed(2)}</span>}
                       </button>
                     ))}
@@ -461,8 +488,8 @@ export default function Academic() {
                     <div className="grid grid-cols-3 gap-3 mb-6">
                       {[
                         { label: 'GPA', val: (selectedTerm.GPA_AVG ?? selectedTerm.gpa_avg) ? parseFloat(selectedTerm.GPA_AVG ?? selectedTerm.gpa_avg).toFixed(2) : '—' },
-                        { label: '취득학점', val: selectedTerm.SUM_ACQ_POINT ?? selectedTerm.sum_acq_point ?? '—' },
-                        { label: '수강과목', val: selectedTerm.CNT_ATLEC_SBJT ?? selectedTerm.cnt_atlec_sbjt ?? '—' },
+                        { label: t('academic.acquiredCredits'), val: selectedTerm.SUM_ACQ_POINT ?? selectedTerm.sum_acq_point ?? '—' },
+                        { label: t('academic.coursesTaken'), val: selectedTerm.CNT_ATLEC_SBJT ?? selectedTerm.cnt_atlec_sbjt ?? '—' },
                       ].map(s => (
                         <div key={s.label} className="card p-4 text-center">
                           <p className="text-label-md text-outline dark:text-slate-400 mb-1">{s.label}</p>
@@ -480,14 +507,14 @@ export default function Academic() {
                       <table className="w-full text-left">
                         <thead>
                           <tr className="border-b border-slate-100 dark:border-slate-800">
-                            {['교과목명','학점','등급','평균평점'].map((h, i) => (
-                              <th key={h} className={`py-3 px-3 text-label-md text-outline dark:text-slate-500 uppercase ${i >= 1 ? 'text-center' : ''}`}>{h}</th>
+                            {[t('academic.colSubject'),t('academic.colCredits'),t('academic.colGrade'),t('academic.colAvgPoint')].map((h, i) => (
+                              <th key={i} className={`py-3 px-3 text-label-md text-outline dark:text-slate-500 uppercase ${i >= 1 ? 'text-center' : ''}`}>{h}</th>
                             ))}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                           {portalDetail.length === 0 ? (
-                            <tr><td colSpan={4} className="py-12 text-center text-on-surface-variant dark:text-slate-400">성적 데이터가 없습니다.</td></tr>
+                            <tr><td colSpan={4} className="py-12 text-center text-on-surface-variant dark:text-slate-400">{t('academic.noGradeData')}</td></tr>
                           ) : portalDetail.map((g, i) => (
                             <tr key={i} className="hover:bg-surface-container-low dark:hover:bg-slate-800 transition-colors">
                               <td className="py-4 px-3">
@@ -520,15 +547,15 @@ export default function Academic() {
               {attendance?.absenceWarnings?.length > 0 && (
                 <div className="mb-4 p-4 bg-error-container dark:bg-error/20 text-error rounded-xl flex items-center gap-3">
                   <span className="material-symbols-outlined">warning</span>
-                  <span className="font-bold text-sm">결석 3회 이상 경고: {attendance.absenceWarnings.join(', ')}</span>
+                  <span className="font-bold text-sm">{t('academic.absenceWarning')}: {attendance.absenceWarnings.join(', ')}</span>
                 </div>
               )}
               <div className="grid grid-cols-4 gap-4 mb-6">
                 {[
-                  { label: '출석', val: attendance?.totalPresent ?? '—', color: 'text-secondary dark:text-secondary-fixed' },
-                  { label: '지각', val: attendance?.totalLate ?? '—', color: 'text-surface-tint dark:text-blue-400' },
-                  { label: '결석', val: attendance?.totalAbsent ?? '—', color: 'text-error' },
-                  { label: '공결', val: attendance?.totalExcused ?? '—', color: 'text-outline dark:text-slate-400' },
+                  { label: t('academic.present'), val: attendance?.totalPresent ?? '—', color: 'text-secondary dark:text-secondary-fixed' },
+                  { label: t('academic.late'), val: attendance?.totalLate ?? '—', color: 'text-surface-tint dark:text-blue-400' },
+                  { label: t('academic.absent'), val: attendance?.totalAbsent ?? '—', color: 'text-error' },
+                  { label: t('academic.excused'), val: attendance?.totalExcused ?? '—', color: 'text-outline dark:text-slate-400' },
                 ].map(s => (
                   <div key={s.label} className="card p-4 text-center">
                     <p className="text-label-md text-outline dark:text-slate-400">{s.label}</p>
@@ -536,9 +563,11 @@ export default function Academic() {
                   </div>
                 ))}
               </div>
-              <p className="text-sm text-on-surface-variant dark:text-slate-400 text-center">
-                CampusFlow 내부 출결 데이터입니다. 실제 학교 포털 출결은 "포털 출결" 탭을 이용하세요.
-              </p>
+              {portalSynced && (
+                <p className="text-sm text-on-surface-variant dark:text-slate-400 text-center">
+                  {t('academic.internalAttendInfo')}
+                </p>
+              )}
             </div>
           )}
 
@@ -549,16 +578,16 @@ export default function Academic() {
               <div className="flex gap-3 mb-5">
                 <select value={scheduleYear} onChange={e => { setScheduleYear(e.target.value); setPortalSchedule(null) }}
                   className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-primary dark:text-white focus:outline-none">
-                  {['2026','2025','2024','2023'].map(y => <option key={y} value={y}>{y}년도</option>)}
+                  {recentYears(4).map(y => <option key={y} value={y}>{t('academic.yearOption', { year: y })}</option>)}
                 </select>
                 <select value={scheduleSemester} onChange={e => { setScheduleSemester(e.target.value); setPortalSchedule(null) }}
                   className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-primary dark:text-white focus:outline-none">
-                  <option value="SU002001">1학기</option>
-                  <option value="SU002002">2학기</option>
+                  <option value="SU002001">{t('academic.semester1')}</option>
+                  <option value="SU002002">{t('academic.semester2')}</option>
                 </select>
                 <button onClick={() => { setPortalSchedule(null); setScheduleLoading(true); getPortalSchedule(scheduleYear, scheduleSemester).then(r => setPortalSchedule(r.data ?? [])).catch(() => setPortalSchedule([])).finally(() => setScheduleLoading(false)) }}
                   className="px-4 py-2 bg-secondary-fixed text-primary rounded-xl text-sm font-bold flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[16px]">refresh</span>조회
+                  <span className="material-symbols-outlined text-[16px]">refresh</span>{t('academic.lookup')}
                 </button>
               </div>
 
@@ -569,13 +598,13 @@ export default function Academic() {
                   <span className="material-symbols-outlined text-[56px] text-outline dark:text-slate-600 block mb-3">event_note</span>
                   {portalSynced ? (
                     <>
-                      <p className="font-bold text-primary dark:text-white">해당 학기 시간표가 없거나 세션이 만료됐습니다</p>
-                      <p className="text-sm text-outline dark:text-slate-400 mt-1">학기를 바꾸거나 프로필 → <strong>지금 다시 동기화</strong>를 시도하세요</p>
+                      <p className="font-bold text-primary dark:text-white">{t('academic.scheduleEmptyOrExpired')}</p>
+                      <p className="text-sm text-outline dark:text-slate-400 mt-1"><Trans i18nKey="academic.scheduleResyncHint" components={{ strong: <strong /> }} /></p>
                     </>
                   ) : (
                     <>
-                      <p className="font-bold text-primary dark:text-white">포털 연동 후 조회 가능합니다</p>
-                      <p className="text-sm text-outline dark:text-slate-400 mt-1">프로필 → 학교 포털 연동을 먼저 진행하세요</p>
+                      <p className="font-bold text-primary dark:text-white">{t('academic.schedulePortalLinkRequired')}</p>
+                      <p className="text-sm text-outline dark:text-slate-400 mt-1">{t('academic.portalLinkFirst')}</p>
                     </>
                   )}
                 </div>
@@ -591,11 +620,11 @@ export default function Academic() {
               {!portalAttend ? (
                 <div className="text-center py-16">
                   <span className="material-symbols-outlined text-[64px] text-outline dark:text-slate-600">fact_check</span>
-                  <p className="mt-3 font-bold text-primary dark:text-white font-['Space_Grotesk']">포털 출결 조회</p>
-                  <p className="text-sm text-on-surface-variant dark:text-slate-400 mt-1 mb-6">check.jvision + LMS 실 출결 데이터를 불러옵니다.</p>
+                  <p className="mt-3 font-bold text-primary dark:text-white font-['Space_Grotesk']">{t('academic.portalAttendTitle')}</p>
+                  <p className="text-sm text-on-surface-variant dark:text-slate-400 mt-1 mb-6">{t('academic.portalAttendDesc')}</p>
                   <button onClick={() => setShowPwModal(true)}
                     className="btn-primary mx-auto">
-                    <span className="material-symbols-outlined text-[18px]">lock_open</span>비밀번호 입력 후 조회
+                    <span className="material-symbols-outlined text-[18px]">lock_open</span>{t('academic.lookupAfterPw')}
                   </button>
                 </div>
               ) : (
@@ -603,10 +632,10 @@ export default function Academic() {
                   {/* 요약 */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
                     {[
-                      { label: '총 출석', val: portalAttend.summary?.total_present ?? 0, color: 'text-secondary dark:text-secondary-fixed' },
-                      { label: '결석', val: portalAttend.summary?.total_absent ?? 0, color: 'text-error' },
-                      { label: '지각', val: portalAttend.summary?.total_late ?? 0, color: 'text-surface-tint dark:text-blue-400' },
-                      { label: '출석률', val: portalAttend.summary?.attendance_rate != null ? `${portalAttend.summary.attendance_rate}%` : '—', color: 'text-primary dark:text-white' },
+                      { label: t('academic.totalPresent'), val: portalAttend.summary?.total_present ?? 0, color: 'text-secondary dark:text-secondary-fixed' },
+                      { label: t('academic.absent'), val: portalAttend.summary?.total_absent ?? 0, color: 'text-error' },
+                      { label: t('academic.late'), val: portalAttend.summary?.total_late ?? 0, color: 'text-surface-tint dark:text-blue-400' },
+                      { label: t('academic.attendanceRate'), val: portalAttend.summary?.attendance_rate != null ? `${portalAttend.summary.attendance_rate}%` : '—', color: 'text-primary dark:text-white' },
                     ].map(s => (
                       <div key={s.label} className="card p-4 text-center">
                         <p className="text-label-md text-outline dark:text-slate-400">{s.label}</p>
@@ -619,7 +648,7 @@ export default function Academic() {
                   {portalAttend.summary?.attendance_rate != null && (
                     <div className="mb-6">
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="font-bold text-primary dark:text-white">전체 출석률</span>
+                        <span className="font-bold text-primary dark:text-white">{t('academic.overallAttendanceRate')}</span>
                         <span className="font-black text-secondary dark:text-secondary-fixed">{portalAttend.summary.attendance_rate}%</span>
                       </div>
                       <div className="w-full h-3 bg-surface-container dark:bg-slate-700 rounded-full overflow-hidden">
@@ -647,10 +676,10 @@ export default function Academic() {
                             )}
                           </div>
                           <div className="flex gap-4 text-xs text-on-surface-variant dark:text-slate-400">
-                            <span>출석 <strong className="text-primary dark:text-white">{c.present ?? 0}</strong></span>
-                            <span>결석 <strong className={c.absent > 0 ? 'text-error' : 'text-primary dark:text-white'}>{c.absent ?? 0}</strong></span>
-                            <span>지각 <strong className="text-primary dark:text-white">{c.late ?? 0}</strong></span>
-                            <span>미출결 <strong className="text-outline dark:text-slate-400">{c.not_checked ?? 0}</strong></span>
+                            <span>{t('academic.present')} <strong className="text-primary dark:text-white">{c.present ?? 0}</strong></span>
+                            <span>{t('academic.absent')} <strong className={c.absent > 0 ? 'text-error' : 'text-primary dark:text-white'}>{c.absent ?? 0}</strong></span>
+                            <span>{t('academic.late')} <strong className="text-primary dark:text-white">{c.late ?? 0}</strong></span>
+                            <span>{t('academic.notChecked')} <strong className="text-outline dark:text-slate-400">{c.not_checked ?? 0}</strong></span>
                           </div>
                           {total > 0 && (
                             <div className="mt-2 w-full h-1.5 bg-surface-container dark:bg-slate-700 rounded-full overflow-hidden">
@@ -664,7 +693,7 @@ export default function Academic() {
                   </div>
                   <button onClick={() => setShowPwModal(true)}
                     className="mt-4 w-full py-2 border border-outline-variant dark:border-slate-700 text-on-surface-variant dark:text-slate-400 rounded-xl text-sm hover:bg-surface-container dark:hover:bg-slate-800 transition-colors">
-                    <span className="material-symbols-outlined text-[16px] align-middle mr-1">refresh</span>다시 조회
+                    <span className="material-symbols-outlined text-[16px] align-middle mr-1">refresh</span>{t('academic.lookupAgain')}
                   </button>
                 </div>
               )}
@@ -681,10 +710,10 @@ export default function Academic() {
                   </span>
                   <div>
                     <p className="font-black text-lg font-['Space_Grotesk'] text-primary dark:text-white">
-                      {(graduation?.isEligible ?? false) ? '졸업 요건 충족' : '졸업 요건 미충족'}
+                      {(graduation?.isEligible ?? false) ? t('academic.graduationEligible') : t('academic.graduationNotEligible')}
                     </p>
                     <p className="text-sm text-on-surface-variant dark:text-slate-400">
-                      이수 학점 {graduation?.totalEarnedCredits ?? '—'} / {graduation?.requiredTotalCredits ?? 80} · GPA {graduation?.currentGpa?.toFixed(2) ?? '—'}
+                      {t('academic.earnedCredits')} {graduation?.totalEarnedCredits ?? '—'} / {graduation?.requiredTotalCredits ?? 80} · GPA {graduation?.currentGpa?.toFixed(2) ?? '—'}
                     </p>
                   </div>
                 </div>
@@ -700,7 +729,7 @@ export default function Academic() {
                       <p className="text-label-md text-outline dark:text-slate-400">{r.category}</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="font-black text-primary dark:text-secondary-fixed">{r.earnedCredits}<span className="font-normal text-outline dark:text-slate-400"> / {r.requiredCredits}학점</span></p>
+                      <p className="font-black text-primary dark:text-secondary-fixed">{r.earnedCredits}<span className="font-normal text-outline dark:text-slate-400"> / {t('academic.creditsSuffix', { count: r.requiredCredits })}</span></p>
                       <div className="w-24 h-1.5 bg-surface-container dark:bg-slate-700 rounded-full mt-1">
                         <div className={`h-full rounded-full ${r.completed ? 'bg-secondary dark:bg-secondary-fixed' : 'bg-error'}`}
                           style={{ width: `${Math.min(100, (r.earnedCredits / r.requiredCredits) * 100)}%` }} />
@@ -718,11 +747,11 @@ export default function Academic() {
               <div>
                 <h4 className="font-bold text-primary dark:text-white mb-4 flex items-center gap-2">
                   <span className="material-symbols-outlined text-secondary dark:text-secondary-fixed">trending_up</span>
-                  학기별 GPA 추이
+                  {t('academic.gpaTrend')}
                 </h4>
                 {gradeTrend.length === 0 ? (
                   <div className="h-40 flex items-center justify-center text-on-surface-variant dark:text-slate-400 text-sm bg-surface-container-low dark:bg-slate-800 rounded-2xl">
-                    데이터가 없습니다.
+                    {t('academic.noData')}
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height={200}>
@@ -740,18 +769,18 @@ export default function Academic() {
               <div>
                 <h4 className="font-bold text-primary dark:text-white mb-4 flex items-center gap-2">
                   <span className="material-symbols-outlined text-secondary dark:text-secondary-fixed">calendar_today</span>
-                  출석 현황 요약
+                  {t('academic.attendanceSummary')}
                 </h4>
                 {!attendSummary ? (
                   <div className="h-24 flex items-center justify-center text-on-surface-variant dark:text-slate-400 text-sm bg-surface-container-low dark:bg-slate-800 rounded-2xl">
-                    데이터가 없습니다.
+                    {t('academic.noData')}
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-4">
                     {[
-                      { label: '총 출석', val: attendSummary.totalPresent, color: 'text-secondary dark:text-secondary-fixed' },
-                      { label: '총 결석', val: attendSummary.totalAbsent, color: 'text-error' },
-                      { label: '총 지각', val: attendSummary.totalLate, color: 'text-surface-tint dark:text-blue-400' },
+                      { label: t('academic.totalPresent'), val: attendSummary.totalPresent, color: 'text-secondary dark:text-secondary-fixed' },
+                      { label: t('academic.totalAbsent'), val: attendSummary.totalAbsent, color: 'text-error' },
+                      { label: t('academic.totalLate'), val: attendSummary.totalLate, color: 'text-surface-tint dark:text-blue-400' },
                     ].map(s => (
                       <div key={s.label} className="card p-4 text-center">
                         <p className="text-label-md text-outline dark:text-slate-400">{s.label}</p>
@@ -768,16 +797,16 @@ export default function Academic() {
           {!loading && tab === 'reviews' && (
             <div>
               <div className="flex justify-between items-center mb-4">
-                <p className="text-sm text-on-surface-variant dark:text-slate-400">{reviews.length}개의 리뷰</p>
+                <p className="text-sm text-on-surface-variant dark:text-slate-400">{t('academic.reviewCount', { count: reviews.length })}</p>
                 <button onClick={() => setShowReviewForm(true)}
                   className="flex items-center gap-1.5 px-4 py-2 bg-primary dark:bg-primary-container text-white rounded-xl text-label-md font-bold hover:scale-[1.02] active:scale-95 transition-transform">
-                  <span className="material-symbols-outlined text-[16px]">add</span>리뷰 작성
+                  <span className="material-symbols-outlined text-[16px]">add</span>{t('academic.writeReview')}
                 </button>
               </div>
               {reviews.length === 0 ? (
                 <div className="text-center py-16">
                   <span className="material-symbols-outlined text-[64px] text-outline dark:text-slate-600">rate_review</span>
-                  <p className="mt-3 font-bold text-primary dark:text-white font-['Space_Grotesk']">작성한 강의 리뷰가 없습니다.</p>
+                  <p className="mt-3 font-bold text-primary dark:text-white font-['Space_Grotesk']">{t('academic.noReviews')}</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -786,7 +815,7 @@ export default function Academic() {
                       <div className="flex items-start justify-between mb-2">
                         <div>
                           <span className="font-bold text-primary dark:text-white">{r.subjectName}</span>
-                          <span className="ml-2 text-[11px] text-outline dark:text-slate-500">{r.anonymous ? '익명' : r.studentName}</span>
+                          <span className="ml-2 text-[11px] text-outline dark:text-slate-500">{r.anonymous ? t('academic.anonymous') : r.studentName}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="flex">
@@ -810,10 +839,12 @@ export default function Academic() {
           )}
 
           {/* ── 수상내역 탭 ── */}
+          {tab === 'planner' && <AiStudyPanel />}
+
           {!loading && tab === 'awards' && (
             <div>
               <div className="flex justify-between items-center mb-4">
-                <p className="text-sm text-on-surface-variant dark:text-slate-400">{awards.length}개의 수상 내역</p>
+                <p className="text-sm text-on-surface-variant dark:text-slate-400">{t('academic.awardCount', { count: awards.length })}</p>
                 <button onClick={() => setShowAwardForm(true)}
                   className="flex items-center gap-1.5 px-4 py-2 bg-primary dark:bg-primary-container text-white rounded-xl text-label-md font-bold hover:scale-[1.02] active:scale-95 transition-transform">
                   <span className="material-symbols-outlined text-[16px]">add</span>{t('academic.addAward')}
@@ -829,7 +860,7 @@ export default function Academic() {
                   {awards.map(a => (
                     <div key={a.id} className="card p-5 group relative">
                       <div className="flex items-start justify-between mb-3">
-                        <span className={`text-[11px] font-black px-3 py-1 rounded-full ${AWARD_LEVEL_COLOR[a.level]}`}>{AWARD_LEVEL_LABEL[a.level]}</span>
+                        <span className={`text-[11px] font-black px-3 py-1 rounded-full ${AWARD_LEVEL_COLOR[a.level]}`}>{t(AWARD_LEVEL_I18N[a.level])}</span>
                         <button onClick={async () => { await deleteAward(a.id); loadAwards() }}
                           className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg bg-error-container dark:bg-error/20 text-error transition-all">
                           <span className="material-symbols-outlined text-[15px]">delete</span>
@@ -851,7 +882,7 @@ export default function Academic() {
       {/* 포털 출결 비밀번호 모달 */}
       {showPwModal && (
         <PasswordModal
-          title="포털 출결 조회"
+          title={t('academic.portalAttendTitle')}
           loading={attendLoading}
           onConfirm={handlePortalAttend}
           onClose={() => setShowPwModal(false)}
@@ -865,7 +896,7 @@ export default function Academic() {
           <div className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md shadow-2xl">
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <h3 className="font-['Space_Grotesk'] text-lg font-bold text-primary dark:text-white flex items-center gap-2">
-                <span className="material-symbols-outlined text-secondary dark:text-secondary-fixed">rate_review</span>강의 리뷰 작성
+                <span className="material-symbols-outlined text-secondary dark:text-secondary-fixed">rate_review</span>{t('academic.writeReviewTitle')}
               </h3>
               <button onClick={() => setShowReviewForm(false)} className="p-2 rounded-full hover:bg-surface-container dark:hover:bg-slate-800">
                 <span className="material-symbols-outlined text-outline dark:text-slate-400">close</span>
@@ -874,16 +905,16 @@ export default function Academic() {
             <form className="p-6 space-y-4" onSubmit={async e => {
               e.preventDefault()
               try { await createReview(reviewForm); setShowReviewForm(false); loadReviews() }
-              catch { alert('저장 중 오류가 발생했습니다.') }
+              catch { alert(t('academic.saveError')) }
             }}>
               <div>
-                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">교과목명</label>
+                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">{t('academic.colSubject')}</label>
                 <input required value={reviewForm.subjectName} onChange={e => setReviewForm(p => ({...p, subjectName: e.target.value}))}
-                  placeholder="예: 데이터베이스 시스템"
+                  placeholder={t('academic.reviewSubjectPlaceholder')}
                   className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
               </div>
               <div>
-                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-2">평점</label>
+                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-2">{t('academic.rating')}</label>
                 <div className="flex gap-1">
                   {[1,2,3,4,5].map(n => (
                     <button key={n} type="button" onClick={() => setReviewForm(p => ({...p, rating: n}))}
@@ -894,19 +925,19 @@ export default function Academic() {
                 </div>
               </div>
               <div>
-                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">내용</label>
+                <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">{t('academic.content')}</label>
                 <textarea required value={reviewForm.content} onChange={e => setReviewForm(p => ({...p, content: e.target.value}))} rows={4}
-                  placeholder="강의에 대한 솔직한 리뷰를 남겨주세요."
+                  placeholder={t('academic.reviewContentPlaceholder')}
                   className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
               </div>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={reviewForm.anonymous} onChange={e => setReviewForm(p => ({...p, anonymous: e.target.checked}))}
                   className="rounded" />
-                <span className="text-sm text-on-surface-variant dark:text-slate-300">익명으로 작성</span>
+                <span className="text-sm text-on-surface-variant dark:text-slate-300">{t('academic.writeAnonymously')}</span>
               </label>
               <div className="flex gap-3">
-                <button type="button" onClick={() => setShowReviewForm(false)} className="flex-1 py-3 border border-outline-variant dark:border-slate-700 text-on-surface-variant dark:text-slate-300 rounded-xl text-sm font-bold">취소</button>
-                <button type="submit" className="flex-1 py-3 bg-primary text-white rounded-xl text-sm font-bold">등록</button>
+                <button type="button" onClick={() => setShowReviewForm(false)} className="flex-1 py-3 border border-outline-variant dark:border-slate-700 text-on-surface-variant dark:text-slate-300 rounded-xl text-sm font-bold">{t('common.cancel')}</button>
+                <button type="submit" className="flex-1 py-3 bg-primary text-white rounded-xl text-sm font-bold">{t('academic.submitReview')}</button>
               </div>
             </form>
           </div>
@@ -930,11 +961,11 @@ export default function Academic() {
             <form className="p-6 space-y-4" onSubmit={async e => {
               e.preventDefault()
               try { await createAward(awardForm); setShowAwardForm(false); loadAwards() }
-              catch { alert('저장 중 오류가 발생했습니다.') }
+              catch { alert(t('academic.saveError')) }
             }}>
               {[
-                { key:'title',        label: t('academic.awardTitle'), placeholder: '예: 교내 프로그래밍 대회' },
-                { key:'organization', label: t('academic.awardOrg'),   placeholder: '예: 컴퓨터정보과' },
+                { key:'title',        label: t('academic.awardTitle'), placeholder: t('academic.awardTitlePlaceholder') },
+                { key:'organization', label: t('academic.awardOrg'),   placeholder: t('academic.awardOrgPlaceholder') },
               ].map(f => (
                 <div key={f.key}>
                   <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">{f.label}</label>
@@ -948,7 +979,7 @@ export default function Academic() {
                   <label className="text-label-md text-on-surface-variant dark:text-slate-400 block mb-1.5">{t('academic.awardLevel')}</label>
                   <select value={awardForm.level} onChange={e => setAwardForm(p => ({...p, level: e.target.value}))}
                     className="w-full px-4 py-3 bg-surface-container-low dark:bg-slate-800 border border-outline-variant dark:border-slate-700 dark:text-on-surface rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
-                    {AWARD_LEVELS.map(l => <option key={l} value={l}>{AWARD_LEVEL_LABEL[l]}</option>)}
+                    {AWARD_LEVELS.map(l => <option key={l} value={l}>{t(AWARD_LEVEL_I18N[l])}</option>)}
                   </select>
                 </div>
                 <div>

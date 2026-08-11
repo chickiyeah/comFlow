@@ -7,6 +7,8 @@ import com.campusflow.domain.jobalert.dto.JobAlertRequest;
 import com.campusflow.domain.jobalert.dto.JobAlertResponse;
 import com.campusflow.domain.jobalert.entity.JobAlert;
 import com.campusflow.domain.jobalert.repository.JobAlertRepository;
+import com.campusflow.domain.notification.entity.NotificationType;
+import com.campusflow.domain.notification.service.NotificationService;
 import com.campusflow.domain.student.entity.Student;
 import com.campusflow.domain.student.repository.StudentRepository;
 import com.campusflow.domain.user.entity.User;
@@ -34,6 +36,7 @@ public class JobAlertService {
     private final MailService         mailService;
     private final JobkoreaService     jobkoreaService;
     private final Work24ScraperService work24Service;
+    private final NotificationService notificationService;
 
     public List<JobAlertResponse> getMyAlerts(String username) {
         return jobAlertRepository.findByStudentId(getStudent(username).getId())
@@ -70,19 +73,47 @@ public class JobAlertService {
         log.info("[채용알리미] {} 건 처리 완료", alerts.size());
     }
 
-    private void notifyAlert(JobAlert alert) {
+    /** 특정 학생의 알리미를 즉시 실행 → 인앱 알림 생성 (수동 새로고침용). 생성된 알림 수 반환. */
+    @Transactional
+    public int runForStudent(String username) {
+        Student student = getStudent(username);
+        List<JobAlert> alerts = jobAlertRepository.findByStudentId(student.getId());
+        int created = 0;
+        for (JobAlert alert : alerts) {
+            try {
+                created += notifyAlert(alert);
+                alert.updateLastNotified();
+            } catch (Exception e) {
+                log.warn("채용 알리미 수동 실행 실패 alertId={}: {}", alert.getId(), e.getMessage());
+            }
+        }
+        return created;
+    }
+
+    /** 알림 처리. 새 공고가 있으면 이메일 발송 + 인앱 알림 생성. 알림 생성 시 1 반환. */
+    private int notifyAlert(JobAlert alert) {
         Student student = alert.getStudent();
-        String email = student.getEmail() != null
-                ? student.getEmail()
-                : (student.getUser() != null ? student.getUser().getEmail() : null);
-        if (email == null || email.isBlank()) return;
 
         List<JobSearchResult> results = Stream.concat(
                 jobkoreaService.searchJobs(alert.getKeyword(), 0, alert.getRegion(), null, alert.getEmpType()).stream(),
                 work24Service.searchJobs(alert.getKeyword(), alert.getRegion(), null, alert.getEmpType(), 1).stream()
         ).limit(5).toList();
 
-        if (results.isEmpty()) return;
+        if (results.isEmpty()) return 0;
+
+        // 인앱 알림 생성 (이메일 발송 여부와 무관하게 항상)
+        String firstUrl = results.get(0).url();
+        notificationService.create(
+                student,
+                NotificationType.JOB_ALERT,
+                "새 채용공고 — " + alert.getKeyword(),
+                String.format("'%s' 관련 새 채용공고 %d건이 있습니다.", alert.getKeyword(), results.size()),
+                (firstUrl != null && !firstUrl.isBlank()) ? firstUrl : "/career");
+
+        String email = student.getEmail() != null
+                ? student.getEmail()
+                : (student.getUser() != null ? student.getUser().getEmail() : null);
+        if (email == null || email.isBlank()) return 1;  // 알림은 생성됨
 
         StringBuilder items = new StringBuilder();
         for (JobSearchResult r : results) {
@@ -111,6 +142,7 @@ public class JobAlertService {
                 """.formatted(student.getName(), alert.getKeyword(), results.size(), items);
 
         mailService.send(email, "새 채용공고 — " + alert.getKeyword(), html);
+        return 1;
     }
 
     private Student getStudent(String username) {

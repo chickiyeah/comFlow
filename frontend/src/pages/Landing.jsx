@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
 import useThemeStore from '../store/themeStore'
@@ -9,15 +10,16 @@ import {
   appendGuestMessages, renameGuestSession, deleteGuestSession,
 } from '../utils/guestChat'
 
-const SUGGESTIONS = [
-  '오늘 학식 알려줘',
-  '컴퓨터정보과 졸업요건 알려줘',
-  '정보처리기사 시험일정',
-  '백엔드 개발자 로드맵',
-]
-
 export default function Landing() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
+
+  const SUGGESTIONS = [
+    t('landing.suggestion1'),
+    t('landing.suggestion2'),
+    t('landing.suggestion3'),
+    t('landing.suggestion4'),
+  ]
   const token = useAuthStore(s => s.token)
   const user  = useAuthStore(s => s.user)
   const logout = useAuthStore(s => s.logout)
@@ -83,7 +85,7 @@ export default function Landing() {
 
   const handleDelete = async (id, e) => {
     e.stopPropagation()
-    if (!confirm('이 채팅을 삭제하시겠습니까?')) return
+    if (!confirm(t('landing.confirmDeleteChat'))) return
     try {
       if (token) await deleteSession(id)
       else       deleteGuestSession(id)
@@ -115,7 +117,7 @@ export default function Landing() {
         setSessions(prev => prev.map(s => s.id === id ? { ...s, title: newTitle } : s))
         if (activeId === id) setActiveTitle(newTitle)
       }
-    } catch { alert('이름 변경 실패') }
+    } catch { alert(t('landing.alertRenameFail')) }
     finally { cancelEdit() }
   }
 
@@ -147,7 +149,7 @@ export default function Landing() {
           setActiveId(session.id); setActiveKey(session.sessionKey); setActiveTitle(session.title)
         }
         const r = await askKomjeong(text, session.sessionKey)
-        const answer = r.data?.answer || '답변을 가져오지 못했습니다.'
+        const answer = r.data?.answer || t('landing.answerError')
         const updated = appendGuestMessages(session.id, text, answer)
         setMessages(updated?.messages ?? [])
         setSessions(pruneAndList())
@@ -156,7 +158,7 @@ export default function Landing() {
       setMessages(prev => [
         ...prev.filter(m => m.id !== tempUser.id),
         tempUser,
-        { id: `err-${Date.now()}`, role: 'assistant', content: '⚠️ 답변을 가져오지 못했습니다.' },
+        { id: `err-${Date.now()}`, role: 'assistant', content: `⚠️ ${t('landing.answerError')}` },
       ])
     } finally { setLoading(false) }
   }
@@ -175,12 +177,12 @@ export default function Landing() {
         <div className="p-3 border-b border-slate-100 dark:border-slate-800">
           <button onClick={newChat}
             className="w-full flex items-center justify-center gap-2 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-primary dark:text-white hover:shadow-sm transition-all">
-            <span className="material-symbols-outlined text-[18px]">add</span>새 채팅
+            <span className="material-symbols-outlined text-[18px]">add</span>{t('landing.newChat')}
           </button>
         </div>
         <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
           {sessions.length === 0 ? (
-            <p className="text-xs text-outline dark:text-slate-500 text-center py-8">대화가 없습니다</p>
+            <p className="text-xs text-outline dark:text-slate-500 text-center py-8">{t('landing.noChats')}</p>
           ) : sessions.map(s => {
             const isEditing = editingId === s.id
             return (
@@ -206,18 +208,18 @@ export default function Landing() {
                     maxLength={200}
                     className="flex-1 bg-white dark:bg-slate-700 border border-secondary-fixed dark:border-secondary-fixed rounded px-1.5 py-0.5 text-sm focus:outline-none dark:text-white" />
                 ) : (
-                  <span className="flex-1 truncate">{s.title || '새 채팅'}</span>
+                  <span className="flex-1 truncate">{s.title || t('landing.newChat')}</span>
                 )}
                 {!isEditing && (
                   <>
                     <span onClick={(e) => startEdit(s, e)}
                       className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-primary/10 dark:hover:bg-slate-700 text-outline dark:text-slate-400 transition-opacity"
-                      title="이름 변경">
+                      title={t('landing.rename')}>
                       <span className="material-symbols-outlined text-[14px]">edit</span>
                     </span>
                     <span onClick={(e) => handleDelete(s.id, e)}
                       className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-error/10 text-error transition-opacity"
-                      title="삭제">
+                      title={t('common.delete')}>
                       <span className="material-symbols-outlined text-[14px]">delete</span>
                     </span>
                   </>
@@ -228,9 +230,9 @@ export default function Landing() {
         </div>
         {!token && (
           <div className="p-3 border-t border-slate-100 dark:border-slate-800 text-xs text-outline dark:text-slate-500">
-            <p className="mb-2">대화는 이 기기에 7일간 보관됩니다.</p>
+            <p className="mb-2">{t('landing.retentionNotice')}</p>
             <button onClick={() => navigate('/login')} className="text-primary dark:text-secondary-fixed font-bold hover:underline">
-              로그인하고 영구 저장
+              {t('landing.loginToSave')}
             </button>
           </div>
         )}
@@ -252,7 +254,7 @@ export default function Landing() {
           </div>
 
           <div className="flex items-center gap-2">
-            <button onClick={toggle} title="테마"
+            <button onClick={toggle} title={t('landing.theme')}
               className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300">
               <span className="material-symbols-outlined text-[20px]">{dark ? 'light_mode' : 'dark_mode'}</span>
             </button>
@@ -261,20 +263,20 @@ export default function Landing() {
                 <button onClick={() => setMenuOpen(o => !o)}
                   className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full bg-primary/5 dark:bg-slate-800 hover:bg-primary/10 dark:hover:bg-slate-700 transition-colors">
                   <span className="w-7 h-7 rounded-full bg-secondary-fixed text-primary text-xs font-bold flex items-center justify-center">
-                    {user?.name?.[0] ?? '학'}
+                    {user?.name?.[0] ?? t('landing.avatarFallback')}
                   </span>
-                  <span className="text-sm font-medium hidden sm:block dark:text-white">{user?.name ?? '학우님'}</span>
+                  <span className="text-sm font-medium hidden sm:block dark:text-white">{user?.name ?? t('landing.userFallback')}</span>
                 </button>
                 {menuOpen && (
                   <div className="absolute right-0 mt-2 w-44 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-100 dark:border-slate-800 overflow-hidden z-50">
                     <button onClick={() => navigate('/dashboard')} className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 dark:text-slate-200">
-                      <span className="material-symbols-outlined text-[18px] text-outline dark:text-slate-400">dashboard</span>대시보드
+                      <span className="material-symbols-outlined text-[18px] text-outline dark:text-slate-400">dashboard</span>{t('nav.dashboard')}
                     </button>
                     <button onClick={() => navigate('/profile')} className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 dark:text-slate-200">
-                      <span className="material-symbols-outlined text-[18px] text-outline dark:text-slate-400">manage_accounts</span>프로필
+                      <span className="material-symbols-outlined text-[18px] text-outline dark:text-slate-400">manage_accounts</span>{t('landing.profile')}
                     </button>
                     <button onClick={() => { logout(); setMenuOpen(false) }} className="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 text-error border-t border-slate-100 dark:border-slate-800">
-                      <span className="material-symbols-outlined text-[18px]">logout</span>로그아웃
+                      <span className="material-symbols-outlined text-[18px]">logout</span>{t('auth.logout')}
                     </button>
                   </div>
                 )}
@@ -283,11 +285,11 @@ export default function Landing() {
               <>
                 <button onClick={() => navigate('/login')}
                   className="px-4 py-1.5 text-sm font-bold text-primary dark:text-white hover:bg-primary/5 dark:hover:bg-slate-800 rounded-full transition-colors">
-                  로그인
+                  {t('auth.login')}
                 </button>
                 <button onClick={() => navigate('/register')}
                   className="px-4 py-1.5 text-sm font-bold bg-primary dark:bg-secondary-fixed text-white dark:text-primary rounded-full hover:scale-[1.02] active:scale-95 transition-transform shadow-sm">
-                  회원가입
+                  {t('landing.register')}
                 </button>
               </>
             )}
@@ -298,12 +300,16 @@ export default function Landing() {
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 sm:px-6">
           {messages.length === 0 && !activeId ? (
             <div className="h-full flex flex-col items-center justify-center -mt-8">
+              {/* 컴정이 로고 마크 */}
+              <div className="w-20 h-20 rounded-[1.4rem] bg-primary dark:bg-primary-container flex items-center justify-center mb-5 shadow-lg shadow-primary/30 ring-1 ring-secondary-fixed/30">
+                <span className="material-symbols-outlined text-secondary-fixed text-[46px] icon-fill">smart_toy</span>
+              </div>
               <h1 className="font-['Space_Grotesk'] text-4xl sm:text-5xl font-black mb-3 text-center">
                 <span className="bg-gradient-to-r from-primary via-secondary-fixed to-primary dark:from-secondary-fixed dark:via-white dark:to-secondary-fixed bg-clip-text text-transparent">
-                  컴정이
+                  {t('landing.assistantName')}
                 </span>
               </h1>
-              <p className="text-sm text-on-surface-variant dark:text-slate-400 mb-8">무엇을 도와드릴까요?</p>
+              <p className="text-sm text-on-surface-variant dark:text-slate-400 mb-8 text-center max-w-md">{t('landing.heroSubtitle')}</p>
               <div className="flex flex-wrap justify-center gap-2 max-w-xl">
                 {SUGGESTIONS.map(s => (
                   <button key={s} onClick={() => handleSend(s)}
@@ -318,7 +324,7 @@ export default function Landing() {
               {messages.map(m => (
                 <div key={m.id} className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : ''}`}>
                   {m.role === 'assistant' && (
-                    <span className="w-8 h-8 rounded-full bg-secondary-fixed text-primary text-xs font-bold flex items-center justify-center shrink-0">컴</span>
+                    <span className="w-8 h-8 rounded-full bg-secondary-fixed text-primary text-xs font-bold flex items-center justify-center shrink-0">{t('landing.assistantAvatar')}</span>
                   )}
                   <div className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap
                     ${m.role === 'user'
@@ -328,14 +334,14 @@ export default function Landing() {
                   </div>
                   {m.role === 'user' && (
                     <span className="w-8 h-8 rounded-full bg-primary/10 dark:bg-slate-700 text-primary dark:text-white text-xs font-bold flex items-center justify-center shrink-0">
-                      {token ? (user?.name?.[0] ?? '나') : '나'}
+                      {token ? (user?.name?.[0] ?? t('landing.userAvatar')) : t('landing.userAvatar')}
                     </span>
                   )}
                 </div>
               ))}
               {loading && (
                 <div className="flex gap-3">
-                  <span className="w-8 h-8 rounded-full bg-secondary-fixed text-primary text-xs font-bold flex items-center justify-center shrink-0">컴</span>
+                  <span className="w-8 h-8 rounded-full bg-secondary-fixed text-primary text-xs font-bold flex items-center justify-center shrink-0">{t('landing.assistantAvatar')}</span>
                   <div className="px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
                     <div className="flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 bg-outline dark:bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -354,7 +360,7 @@ export default function Landing() {
           <form onSubmit={e => { e.preventDefault(); handleSend() }} className="max-w-3xl mx-auto">
             <div className="relative">
               <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)}
-                placeholder={activeId ? '메시지 입력' : '컴정이에게 무엇이든 물어보세요'} disabled={loading}
+                placeholder={activeId ? t('landing.placeholderMessage') : t('landing.placeholderAsk')} disabled={loading}
                 className="w-full pl-5 pr-14 py-4 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-full focus:border-secondary-fixed focus:outline-none transition-all dark:text-white disabled:opacity-60" />
               <button type="submit" disabled={!query.trim() || loading}
                 className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-secondary-fixed text-primary rounded-full flex items-center justify-center hover:scale-110 active:scale-95 transition-transform disabled:opacity-30 disabled:hover:scale-100">
@@ -362,7 +368,7 @@ export default function Landing() {
               </button>
             </div>
             <p className="text-[10px] text-center text-outline dark:text-slate-600 mt-2">
-              {token ? '컴정이는 컴퓨터정보과 자료 기반으로 답합니다' : '대화는 이 기기에 7일간 보관됩니다'}
+              {token ? t('landing.footerLoggedIn') : t('landing.footerGuest')}
             </p>
           </form>
         </div>

@@ -8,10 +8,11 @@ public record NoticeResponse(
         Long id,
         String title,
         String summary,
+        String content,
         boolean important,
         LocalDateTime createdAt
 ) {
     public static NoticeResponse from(Notice n) {
-        return new NoticeResponse(n.getId(), n.getTitle(), n.getSummary(), n.isImportant(), n.getCreatedAt());
+        return new NoticeResponse(n.getId(), n.getTitle(), n.getSummary(), n.getContent(), n.isImportant(), n.getCreatedAt());
     }
 }

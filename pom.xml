@@ -133,6 +133,18 @@
             <version>1.17.2</version>
         </dependency>
 
+        <!-- Web Push (VAPID 브라우저 푸시 알림) -->
+        <dependency>
+            <groupId>nl.martijndwars</groupId>
+            <artifactId>web-push</artifactId>
+            <version>5.1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.78.1</version>
+        </dependency>
+
         <!-- Cache (Caffeine — 인메모리 캐시) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

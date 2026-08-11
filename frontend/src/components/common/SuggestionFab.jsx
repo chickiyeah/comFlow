@@ -22,7 +22,7 @@ export default function SuggestionFab() {
       setForm({ category: 'GENERAL', content: '' })
       setTimeout(() => { setSuccess(false); setOpen(false) }, 2500)
     } catch {
-      setError('제출 중 오류가 발생했습니다.')
+      setError(t('suggestion.submitError'))
     } finally {
       setLoading(false)
     }
@@ -122,7 +122,7 @@ export default function SuggestionFab() {
                   <div className="flex items-center gap-3 p-3 bg-surface-container-low dark:bg-slate-800 rounded-xl">
                     <span className="material-symbols-outlined text-outline dark:text-slate-400 text-[18px]">visibility_off</span>
                     <p className="text-label-md text-outline dark:text-slate-400">
-                      IP 주소, 학번 등 개인정보는 저장되지 않습니다.
+                      {t('suggestion.privacyNote')}
                     </p>
                   </div>
 
@@ -131,7 +131,7 @@ export default function SuggestionFab() {
                     disabled={loading || form.content.length < 10}
                     className="w-full py-3 bg-primary dark:bg-primary-container text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-transform disabled:opacity-50"
                   >
-                    {loading ? '제출 중...' : t('suggestion.submitBtn')}
+                    {loading ? t('suggestion.submitting') : t('suggestion.submitBtn')}
                   </button>
                 </>
               )}

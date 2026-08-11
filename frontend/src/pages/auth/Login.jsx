@@ -23,9 +23,10 @@ export default function Login() {
     try {
       const res = await login(form)
       setAuth(res.data.accessToken, { name: res.data.name, role: res.data.role })
-      navigate('/dashboard')
+      navigate(res.data.role === 'ROLE_PROFESSOR' ? '/professor' : '/dashboard')
     } catch (err) {
-      setError(err?.message || t('auth.loginFailed'))
+      // 언어 설정을 따르도록 i18n 메시지 사용 (백엔드 한글 메시지 직접 노출 안 함)
+      setError(t('auth.loginFailed'))
     } finally {
       setLoading(false)
     }
@@ -47,7 +48,7 @@ export default function Login() {
             <span className="text-secondary-fixed font-black text-2xl font-['Space_Grotesk']">CF</span>
           </div>
           <h1 className="text-2xl font-black text-primary dark:text-white font-['Space_Grotesk']">CampusFlow</h1>
-          <p className="text-on-surface-variant dark:text-slate-400 text-sm mt-1">컴퓨터정보과 학과 통합 관리 시스템</p>
+          <p className="text-on-surface-variant dark:text-slate-400 text-sm mt-1">{t('ui.appTagline')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 rounded-3xl border border-outline-variant dark:border-slate-800 p-8 shadow-sm space-y-5">
@@ -86,8 +87,11 @@ export default function Login() {
         </form>
 
         <p className="text-center text-sm text-on-surface-variant dark:text-slate-400 mt-6">
-          계정이 없으신가요?{' '}
-          <Link to="/register" className="text-primary dark:text-secondary-fixed font-bold hover:underline">회원가입</Link>
+          {t('auth.noAccount')}{' '}
+          <Link to="/register" className="text-primary dark:text-secondary-fixed font-bold hover:underline">{t('auth.register')}</Link>
+        </p>
+        <p className="text-center text-label-md text-outline dark:text-slate-500 mt-2">
+          <Link to="/find-account" className="hover:text-primary dark:hover:text-secondary-fixed hover:underline">{t('auth.findAccount')}</Link>
         </p>
       </div>
     </div>
